@@ -3,7 +3,7 @@ import SwiftUI
 import Combine
 
 /// 状态栏控制器：负责状态栏图标、定时刷新、面板弹出
-final class MenuBarController: NSObject, NSPopoverDelegate, ObservableObject {
+final class MenuBarController: NSObject, ObservableObject {
     @Published var gold: GoldQuote?
     @Published var lastUpdate: Date?
     @Published var isLoading = false
@@ -30,7 +30,9 @@ final class MenuBarController: NSObject, NSPopoverDelegate, ObservableObject {
     @Published var allMarketsClosed = false
 
     private var statusItem: NSStatusItem!
-    private var popover: NSPopover!
+    private var panel: NSPanel!
+    private var globalEventMonitor: Any?
+    private var localEventMonitor: Any?
     private var timer: Timer?
     private var countdownTimer: Timer?
     private let service = GoldService()
@@ -55,7 +57,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate, ObservableObject {
         // 请求通知权限
         notifier.requestPermission()
         setupStatusItem()
-        setupPopover()
+        setupPanel()
         startTimer()
     }
 
@@ -79,7 +81,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate, ObservableObject {
             return
         }
         if event.type == .rightMouseUp {
-            popover.performClose(nil) // 右键时先收起面板
+            closePanel() // 右键时先收起面板
             statusItem.popUpMenu(buildContextMenu())
         } else {
             togglePopover(nil)
@@ -116,41 +118,105 @@ final class MenuBarController: NSObject, NSPopoverDelegate, ObservableObject {
         }
     }
 
-    // MARK: - 弹窗
+    // MARK: - 弹窗（自定义 NSPanel，无三角箭头）
 
-    private func setupPopover() {
+    private func setupPanel() {
         let contentView = MainPanelView(controller: self)
         let hosting = NSHostingView(rootView: contentView)
         hosting.frame = NSRect(x: 0, y: 0, width: 380, height: 460)
+        // 圆角裁剪：面板本身透明，内容视图裁出圆角
+        hosting.wantsLayer = true
+        hosting.layer?.cornerRadius = 12
+        hosting.layer?.masksToBounds = true
 
-        popover = NSPopover()
-        popover.contentSize = NSSize(width: 380, height: 460)
-        popover.behavior = .transient
-        popover.animates = true
-        popover.contentViewController = NSViewController()
-        popover.contentViewController?.view = hosting
-        popover.delegate = self
+        panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 460),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        panel.isFloatingPanel = true
+        panel.level = .popUpMenu
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = true
+        panel.isReleasedWhenClosed = false
+        panel.hidesOnDeactivate = false
+        panel.becomesKeyOnlyIfNeeded = true
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.contentView = hosting
     }
 
     @objc private func togglePopover(_ sender: Any?) {
-        if popover.isShown {
-            popover.performClose(sender)
+        if panel.isVisible {
+            closePanel()
         } else {
-            // 弹出前立即刷新一次，保证数据最新
-            Task { await refresh() }
-            if let button = statusItem.button {
-                popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            }
+            showPanel()
         }
     }
 
-    func popoverDidClose(_ notification: Notification) {
-        // 面板关闭，无额外处理：定时器常驻后台刷新，保证状态栏价格实时
+    private func showPanel() {
+        guard let button = statusItem.button else { return }
+        // 弹出前立即刷新一次，保证数据最新
+        Task { await refresh() }
+
+        // 定位到状态栏按钮下方居中，屏幕边界内钳制
+        let size = panel.frame.size
+        let btnFrame = button.window?.convertToScreen(button.convert(button.bounds, to: nil)) ?? button.bounds
+        var x = btnFrame.midX - size.width / 2
+        let y = btnFrame.minY - size.height - 4
+        if let screen = button.window?.screen ?? NSScreen.main {
+            let vf = screen.visibleFrame
+            x = min(max(x, vf.minX + 4), vf.maxX - size.width - 4)
+        }
+        panel.setFrameOrigin(NSPoint(x: x, y: y))
+        panel.makeKeyAndOrderFront(nil)
+        // 延迟启动监控，避免触发弹出的那次点击被 monitor 捕获导致面板瞬关
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard self?.panel.isVisible == true else { return }
+            self?.startMonitoring()
+        }
     }
 
-    func popoverDidShow(_ notification: Notification) {
-        // 面板打开：立即刷新一次，保证展示最新数据
-        Task { await refresh() }
+    private func closePanel() {
+        guard panel.isVisible else { return }
+        panel.orderOut(nil)
+        stopMonitoring()
+    }
+
+    // MARK: - 外部点击关闭
+
+    private func startMonitoring() {
+        stopMonitoring()
+        globalEventMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] _ in
+            DispatchQueue.main.async { self?.handleOutsideClick() }
+        }
+        localEventMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] event in
+            self?.handleOutsideClick()
+            return event
+        }
+    }
+
+    private func stopMonitoring() {
+        if let m = globalEventMonitor { NSEvent.removeMonitor(m); globalEventMonitor = nil }
+        if let m = localEventMonitor { NSEvent.removeMonitor(m); localEventMonitor = nil }
+    }
+
+    /// 点击面板外部时关闭；点击状态栏按钮区域交给 toggle 逻辑处理，不在此关闭
+    private func handleOutsideClick() {
+        guard panel.isVisible else { return }
+        let mouseLoc = NSEvent.mouseLocation // 屏幕坐标（左下原点），与 panel.frame 同坐标系
+        if let button = statusItem.button, let win = button.window {
+            let btnFrame = win.convertToScreen(button.convert(button.bounds, to: nil))
+                .insetBy(dx: -4, dy: -4)
+            if btnFrame.contains(mouseLoc) { return }
+        }
+        if panel.frame.contains(mouseLoc) { return }
+        closePanel()
     }
 
     // MARK: - 定时器

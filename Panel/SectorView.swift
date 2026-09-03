@@ -17,7 +17,6 @@ struct SectorView: View {
             // 分时线图
             if let td = controller.trendData {
                 TrendChart(trend: td)
-                    .padding(.top, 4)
                     .padding(.horizontal, 16)
             }
 

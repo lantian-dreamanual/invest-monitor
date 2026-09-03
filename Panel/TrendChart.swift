@@ -78,7 +78,7 @@ struct TrendChart: View {
 
     // MARK: - 布局参数
 
-    private var leftPad: Double { 36.0 }
+    private var leftPad: Double { 8.0 }
     private var topPad: Double { 10.0 }
     private var bottomPad: Double { 24.0 }
     private var rightPad: Double { 4.0 }
@@ -227,22 +227,6 @@ struct TrendChart: View {
             )
         }
 
-        // 8. 左侧昨收价标注
-        let preCloseLabel = Text(String(format: "%.2f", preClose))
-            .font(.system(size: 8))
-            .foregroundColor(.gray)
-        let resolved = context.resolve(preCloseLabel)
-        let textSize = resolved.measure(in: CGSize(width: 100, height: 20))
-        let labelW = textSize.width + 6
-        let labelH = textSize.height + 2
-        let labelX = chartX - labelW - 2
-        let labelY = preCloseY - labelH / 2
-        context.fill(
-            Path(CGRect(x: labelX, y: labelY, width: labelW, height: labelH)),
-            with: .color(.gray.opacity(0.12))
-        )
-        context.draw(resolved, at: CGPoint(x: labelX + labelW / 2, y: preCloseY), anchor: .center)
-
         // 9. 底部刻度尺
         let ticks: [(String, Double)]
         switch mode {
@@ -327,13 +311,15 @@ struct TrendChart: View {
             style: StrokeStyle(lineWidth: 1.5)
         )
 
-        // 气泡：时间 + 价格（+ 均价如有）
+        // 气泡：时间+价格 → 均价 → 昨收
         let timeStr = displayTime(pt.time)
         let priceStr = String(format: "%.2f", pt.price)
+        let preCloseStr = String(format: "昨收 %.2f", preClose)
         let avgStr = pt.avgPrice > 0 ? String(format: "均价 %.2f", pt.avgPrice) : nil
 
         var lines: [String] = ["\(timeStr)  ¥\(priceStr)"]
         if let avgStr = avgStr { lines.append(avgStr) }
+        lines.append(preCloseStr)
 
         let attrLines = lines.map {
             Text($0).font(.system(size: 9)).foregroundColor(.white)
