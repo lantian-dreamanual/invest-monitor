@@ -19,16 +19,42 @@ enum AlertEngine {
     }
 
     /// 判断已触发规则是否应恢复（价格回落过阈值）
+    /// 采用差异化迟滞：不同标的类型使用不同的迟滞幅度，避免统一 1% 造成的
+    /// 「涨跌幅类迟滞近乎无效、价格类迟滞偏大」的问题
     /// - Returns: true 表示价格已离开触发区域，可重置 triggered
     static func shouldReset(rule: AlertRule, value: Double) -> Bool {
         guard rule.enabled, rule.triggered else { return false }
-        switch rule.direction {
-        case .above:
-            // ≥ 阈值触发后，价格回落到阈值以下一定幅度（1%）才重置
-            return value < rule.threshold * 0.99
-        case .below:
-            // ≤ 阈值触发后，价格回升到阈值以上一定幅度（1%）才重置
-            return value > rule.threshold * 1.01
+        switch rule.targetType {
+        case .sector:
+            // 板块涨跌幅：绝对迟滞 0.5 个百分点（如 -2% 触发 → 回升到 -1.5% 以上才重置）
+            if rule.direction == .above {
+                return value < rule.threshold - 0.5
+            } else {
+                return value > rule.threshold + 0.5
+            }
+        case .fund:
+            if rule.fundMetric == .changePct {
+                // 基金涨跌幅：与板块一致，绝对迟滞 0.5 个百分点
+                if rule.direction == .above {
+                    return value < rule.threshold - 0.5
+                } else {
+                    return value > rule.threshold + 0.5
+                }
+            } else {
+                // 基金净值：相对迟滞 0.5%（如 2.92 触发 → 回落到 2.9054 以下才重置）
+                if rule.direction == .above {
+                    return value < rule.threshold * 0.995
+                } else {
+                    return value > rule.threshold * 1.005
+                }
+            }
+        case .goldCNY:
+            // 黄金价格：相对迟滞 0.5%（如 970 触发 → 回落到 965.15 以下才重置）
+            if rule.direction == .above {
+                return value < rule.threshold * 0.995
+            } else {
+                return value > rule.threshold * 1.005
+            }
         }
     }
 
