@@ -8,6 +8,8 @@
 *.dmg
 *.o
 *.out
+!dist/
+!dist/*.dmg
 
 # Xcode
 *.xcodeproj

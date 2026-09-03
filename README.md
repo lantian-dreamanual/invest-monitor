@@ -26,7 +26,7 @@ macOS 菜单栏投资监控工具，实时追踪黄金价格、A股板块行情�
 
 ### 方式一：下载 DMG（推荐）
 
-1. 从 [Releases](../../releases) 页面下载最新 DMG 文件
+1. 从 [dist/](dist/) 目录下载最新 DMG 文件（[Dreamanual投资监控-v1.0.dmg](dist/Dreamanual投资监控-v1.0.dmg)）
 2. 打开 DMG，将 Dreamanual投资监控.app 拖入「应用程序」文件夹
 3. 首次启动需在系统设置 → 隐私与安全性中允许运行
 4. 首次启动会请求通知权限，点击「允许」即可
