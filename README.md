@@ -34,7 +34,7 @@ macOS 菜单栏投资监控工具，实时追踪黄金价格、A股板块行情�
 ### 方式二：源码编译
 
 ```bash
-git clone https://github.com/wuyifa001/invest-monitor.git
+git clone https://github.com/lantian-dreamanual/invest-monitor.git
 cd invest-monitor
 xcrun swiftc -O \
   InvestmentBarApp.swift \
