@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Build products
+*.app
+*.dmg
+*.o
+*.out
+
+# Xcode
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Temp files
+.temp/
+*.log
+
+# Code signing
+*_CodeSignature/

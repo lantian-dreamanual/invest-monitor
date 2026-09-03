@@ -1,0 +1,357 @@
+import AppKit
+import SwiftUI
+import Combine
+
+/// 状态栏控制器：负责状态栏图标、定时刷新、面板弹出
+final class MenuBarController: NSObject, NSPopoverDelegate, ObservableObject {
+    @Published var gold: GoldQuote?
+    @Published var lastUpdate: Date?
+    @Published var isLoading = false
+    @Published var errorMessage: String?       // 主要数据（黄金/板块）错误
+    @Published var fundErrorMessage: String?    // 基金数据错误（独立显示）
+    // M3 板块
+    @Published var sector: SectorQuote?
+    @Published var sectorStocks: [StockQuote] = []
+    // M4 基金
+    @Published var funds: [FundDetail] = []
+    @Published var fundStockChanges: [String: Double] = [:]
+    // M5 配置
+    @Published var configStore: ConfigStore
+    @Published var allSectors: [SectorQuote] = []   // 所有配置板块指数
+    @Published var currentSectorCode: String        // 当前选中板块
+    // 分时线
+    @Published var trendData: TrendData?       // 板块分时
+    @Published var goldTrendData: TrendData?   // 黄金分时
+    // M6 预警
+    @Published var alertConfig: AlertConfig
+    // 刷新倒计时（秒），右上角展示「x 秒后更新」
+    @Published var countdown = 30
+    // 全部休市时为 true，右上角显示「已收盘」而非倒计时
+    @Published var allMarketsClosed = false
+
+    private var statusItem: NSStatusItem!
+    private var popover: NSPopover!
+    private var timer: Timer?
+    private var countdownTimer: Timer?
+    private let service = GoldService()
+    private let sectorService = SectorService()
+    private let fundService = FundService()
+    private var cancellables = Set<AnyCancellable>()
+    private let notifier = AlertNotifier.shared
+
+    override init() {
+        let store = ConfigStore()
+        self.configStore = store
+        self.currentSectorCode = store.config.sectors.first?.code ?? "BK0475"
+        self.alertConfig = AlertConfig()
+        super.init()
+        // configStore 变化转发到 controller，驱动 SwiftUI 视图刷新
+        store.objectWillChange.sink { [weak self] in
+            self?.objectWillChange.send()
+        }.store(in: &cancellables)
+        alertConfig.objectWillChange.sink { [weak self] in
+            self?.objectWillChange.send()
+        }.store(in: &cancellables)
+        // 请求通知权限
+        notifier.requestPermission()
+        setupStatusItem()
+        setupPopover()
+        startTimer()
+    }
+
+    // MARK: - 状态栏
+
+    private func setupStatusItem() {
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        if let button = statusItem.button {
+            button.target = self
+            button.action = #selector(handleClick)
+            // 监听左右键鼠标抬起，区分左键切面板 / 右键弹菜单
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        }
+        updateStatusTitle()
+    }
+
+    /// 统一入口：左键 toggle 面板，右键弹出菜单
+    @objc private func handleClick() {
+        guard let event = NSApp.currentEvent else {
+            togglePopover(nil)
+            return
+        }
+        if event.type == .rightMouseUp {
+            popover.performClose(nil) // 右键时先收起面板
+            statusItem.popUpMenu(buildContextMenu())
+        } else {
+            togglePopover(nil)
+        }
+    }
+
+    /// 右键菜单：退出应用
+    private func buildContextMenu() -> NSMenu {
+        let menu = NSMenu()
+        // 退出
+        let quitItem = NSMenuItem(title: "退出", action: #selector(quitApp), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
+        return menu
+    }
+
+    /// 退出应用
+    @objc private func quitApp() {
+        NSApp.terminate(nil)
+    }
+
+    /// 更新状态栏文字：▲ 938.22
+    func updateStatusTitle() {
+        guard let button = statusItem.button else { return }
+        if let g = gold {
+            let arrow = g.changePct >= 0 ? "▲" : "▼"
+            let title = String(format: "%@ %.2f", arrow, g.priceCNY)
+            button.attributedTitle = NSAttributedString(
+                string: title,
+                attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)]
+            )
+        } else {
+            button.title = "--"
+        }
+    }
+
+    // MARK: - 弹窗
+
+    private func setupPopover() {
+        let contentView = MainPanelView(controller: self)
+        let hosting = NSHostingView(rootView: contentView)
+        hosting.frame = NSRect(x: 0, y: 0, width: 380, height: 460)
+
+        popover = NSPopover()
+        popover.contentSize = NSSize(width: 380, height: 460)
+        popover.behavior = .transient
+        popover.animates = true
+        popover.contentViewController = NSViewController()
+        popover.contentViewController?.view = hosting
+        popover.delegate = self
+    }
+
+    @objc private func togglePopover(_ sender: Any?) {
+        if popover.isShown {
+            popover.performClose(sender)
+        } else {
+            // 弹出前立即刷新一次，保证数据最新
+            Task { await refresh() }
+            if let button = statusItem.button {
+                popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            }
+        }
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        // 面板关闭，无额外处理：定时器常驻后台刷新，保证状态栏价格实时
+    }
+
+    func popoverDidShow(_ notification: Notification) {
+        // 面板打开：立即刷新一次，保证展示最新数据
+        Task { await refresh() }
+    }
+
+    // MARK: - 定时器
+
+    /// 黄金交易时段：夜盘 21:00-02:30 + 日盘 09:00-15:00
+    var isGoldMarketOpen: Bool {
+        let cal = Calendar.current
+        let now = cal.component(.hour, from: Date()) * 60 + cal.component(.minute, from: Date())
+        if now >= 21 * 60 || now <= 2 * 60 + 30 { return true }
+        if now >= 9 * 60 && now <= 15 * 60 { return true }
+        return false
+    }
+
+    /// A股交易时段：09:30-11:30 + 13:00-15:00
+    var isStockMarketOpen: Bool {
+        let cal = Calendar.current
+        let now = cal.component(.hour, from: Date()) * 60 + cal.component(.minute, from: Date())
+        if now >= 9 * 60 + 30 && now <= 11 * 60 + 30 { return true }
+        if now >= 13 * 60 && now <= 15 * 60 { return true }
+        return false
+    }
+
+    /// 任一市场在交易时段则刷新；全部休市则停止
+    private var anyMarketOpen: Bool {
+        isGoldMarketOpen || isStockMarketOpen
+    }
+
+    /// 后台常驻定时器：任一市场交易时段每 30 秒刷新，全部休市时自动暂停
+    private func startTimer() {
+        guard timer == nil else { return }
+        let t = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            if self.anyMarketOpen {
+                Task { await self.refresh() }
+            }
+        }
+        t.tolerance = 5
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+        startCountdownTimer()
+        // 启动立即刷新
+        Task { await refresh() }
+    }
+
+    /// 每秒倒计时，驱动右上角文案；全部休市时显示「已收盘」
+    private func startCountdownTimer() {
+        guard countdownTimer == nil else { return }
+        let t = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            let closed = !self.anyMarketOpen
+            self.allMarketsClosed = closed
+            if closed {
+                self.countdown = 0
+                return
+            }
+            if self.isLoading { return } // 刷新中不递减
+            self.countdown -= 1
+            if self.countdown <= 0 { self.countdown = 30 }
+        }
+        t.tolerance = 0.2
+        RunLoop.main.add(t, forMode: .common)
+        countdownTimer = t
+    }
+
+    // MARK: - 刷新
+
+    @MainActor
+    func refresh() async {
+        guard !isRefreshing else { return }
+        isRefreshing = true
+        isLoading = true
+        defer {
+            isRefreshing = false
+            isLoading = false
+            countdown = 30
+        }
+        // 板块被删除后，修正当前选中到第一个可用板块
+        if !configStore.config.sectors.contains(where: { $0.code == currentSectorCode }) {
+            currentSectorCode = configStore.config.sectors.first?.code ?? "BK0475"
+        }
+        do {
+            let sectorCodes = configStore.config.sectors.map { $0.code }
+            let sectorName = configStore.config.sectors.first(where: { $0.code == currentSectorCode })?.name ?? ""
+            async let goldTask = service.fetch()
+            // 当前板块：指数 + 成分股 + 分时线
+            async let sectorTask = sectorService.fetchIndex(code: currentSectorCode, name: sectorName)
+            async let stocksTask = sectorService.fetchStocks(code: currentSectorCode)
+            async let trendsTask = sectorService.fetchTrends(code: currentSectorCode, name: sectorName)
+            // 黄金分时线（国际品种，独立拉取）
+            async let goldTrendsTask = sectorService.fetchGoldTrends()
+            let (g, s, st, td, gtd) = try await (goldTask, sectorTask, stocksTask, trendsTask, goldTrendsTask)
+            self.gold = g
+            self.sector = s
+            self.sectorStocks = st
+            self.trendData = td
+            self.goldTrendData = gtd
+
+            // 所有板块指数（用于 Tab 快速切换）
+            if sectorCodes.count > 1 {
+                let sectorQuotes = try await sectorService.fetchIndices(codes: sectorCodes, names: configStore.config.sectors.map { $0.name })
+                self.allSectors = sectorQuotes
+            } else {
+                self.allSectors = [s]
+            }
+
+            // M4 基金：净值 + 重仓 + 实时行情估算
+            await self.refreshFunds()
+
+            self.lastUpdate = Date()
+            self.errorMessage = nil
+            self.updateStatusTitle()
+
+            // M6 预警检查
+            self.checkAlerts()
+        } catch let error as FetchError {
+            self.errorMessage = "\(error.localizedDescription)（已显示上次数据）"
+            // 保留旧数据
+        } catch {
+            self.errorMessage = "更新失败，请稍后重试"
+        }
+    }
+
+    /// 当前板块代码
+    private var currentSector: String {
+        currentSectorCode
+    }
+
+    /// 刷新基金：净值 → 重仓 → 批量行情 → 估算
+    @MainActor
+    func refreshFunds() async {
+        // 立即移除已从配置删除的基金，UI 瞬间反映
+        let validCodes = Set(configStore.config.funds.map { $0.code })
+        self.funds = self.funds.filter { validCodes.contains($0.quote.code) }
+
+        do {
+            let details = try await fundService.fetchAll(codes: configStore.config.funds.map { $0.code })
+            // 合并所有重仓股，去重
+            var holdings: [(code: String, exchange: Int)] = []
+            var seen = Set<String>()
+            for d in details {
+                for h in d.holdings {
+                    let key = h.code
+                    if !seen.contains(key) {
+                        seen.insert(key)
+                        holdings.append((code: h.code, exchange: h.exchange))
+                    }
+                }
+            }
+            // 批量拉取实时涨跌
+            let changes = try await sectorService.fetchStockChanges(codes: holdings)
+            // 计算估算
+            var updated = details
+            for i in updated.indices {
+                let pct = FundEstimator.estimateChangePct(holdings: updated[i].holdings, stockMap: changes)
+                updated[i].estChangePct = pct
+                if let pct {
+                    updated[i].estNav = FundEstimator.estimateNav(nav: updated[i].quote.nav, changePct: pct)
+                }
+            }
+            self.funds = updated
+            self.fundStockChanges = changes
+            self.fundErrorMessage = nil
+        } catch let error as FetchError {
+            self.fundErrorMessage = "基金数据\(error.localizedDescription)"
+            // 基金失败不阻塞主流程，保留旧数据
+        } catch {
+            self.fundErrorMessage = "基金数据更新失败"
+        }
+    }
+
+    func refreshNow() async {
+        await refresh()
+    }
+
+    // MARK: - 预警
+
+    /// 预警检查：比对最新数据与所有规则，触发通知 + 管理状态
+    @MainActor
+    func checkAlerts() {
+        let values = AlertEngine.extractValues(
+            gold: gold, sectors: allSectors, funds: funds
+        )
+        let (triggerIdx, resetIdx) = AlertEngine.checkAll(
+            rules: alertConfig.rules, values: values
+        )
+
+        // 触发通知
+        for i in triggerIdx {
+            let rule = alertConfig.rules[i]
+            let key = AlertEngine.ruleKey(rule)
+            if let value = values[key] {
+                notifier.sendNotification(rule: rule, currentValue: value)
+            }
+            alertConfig.updateStatus(at: i, triggered: true)
+        }
+
+        // 恢复已触发规则
+        for i in resetIdx {
+            alertConfig.updateStatus(at: i, triggered: false)
+        }
+    }
+
+    private var isRefreshing = false
+}
