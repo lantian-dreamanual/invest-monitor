@@ -15,7 +15,7 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleExecutable</key>
-    <string>InvestMonitor</string>
+    <string>投资监控</string>
     <key>NSHumanReadableCopyright</key>
     <string>© 2026 蓝添 (Dreamanual). All rights reserved.</string>
     <key>CFBundleIconFile</key>

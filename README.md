@@ -3,10 +3,10 @@ AIGC:
   ContentProducer: '001191110102MAD55U9H0F10002'
   ContentPropagator: '001191110102MAD55U9H0F10002'
   Label: '1'
-  ProduceID: '9971a141-9679-446e-845f-2fd11588c8e3'
-  PropagateID: '9971a141-9679-446e-845f-2fd11588c8e3'
-  ReservedCode1: 'fe82dc0e-b35f-48f2-8650-323375e73f59'
-  ReservedCode2: 'fe82dc0e-b35f-48f2-8650-323375e73f59'
+  ProduceID: '00a6588e-935a-4d4f-928e-b3beadebd085'
+  PropagateID: '00a6588e-935a-4d4f-928e-b3beadebd085'
+  ReservedCode1: '35c12afa-4112-43c6-bcda-6dad781d1364'
+  ReservedCode2: '35c12afa-4112-43c6-bcda-6dad781d1364'
 ---
 
 # Dreamanual 投资监控
@@ -94,7 +94,7 @@ xcrun swiftc -O \
   Panel/SectorView.swift \
   Panel/SettingsView.swift \
   Panel/TrendChart.swift \
-  -o "Dreamanual Invest Monitor.app/Contents/MacOS/InvestMonitor" \
+  -o "Dreamanual Invest Monitor.app/Contents/MacOS/投资监控" \
   -framework AppKit -framework SwiftUI -framework Combine -framework UserNotifications
 ```
 
