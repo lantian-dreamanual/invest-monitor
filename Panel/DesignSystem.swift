@@ -8,12 +8,93 @@ struct MarketStatusBadge: View {
 
     var body: some View {
         Text(isOpen ? "交易中" : "已收盘")
-            .font(.system(size: 9, weight: .medium))
-            .padding(.horizontal, 5)
+            .font(.system(size: 10, weight: .medium))
+            .padding(.horizontal, 6)
             .padding(.vertical, 1)
             .background(isOpen ? Color.up.opacity(0.12) : Color.gray.opacity(0.12))
             .foregroundColor(isOpen ? .up : .secondary)
-            .cornerRadius(4)
+            .cornerRadius(6)
+    }
+}
+
+// ============ 设计系统：表单组件 ============
+
+/// 表单标签：统一 12pt secondary，与控件间距 6pt
+struct FormLabel: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 12))
+            .foregroundColor(.secondary)
+    }
+}
+
+/// 自定义输入框：可见边框 + 聚焦高亮，解决系统默认边框不可见问题
+/// - 高度 28pt，圆角 6pt，边框 gray.opacity(0.35) 常态 / blue.opacity(0.6) 聚焦
+struct FormTextField: View {
+    let placeholder: String
+    @Binding var text: String
+    var width: CGFloat? = nil
+
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .textFieldStyle(.plain)
+            .font(.system(size: 14))
+            .focused($isFocused)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color(nsColor: .textBackgroundColor))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(
+                        isFocused ? Color.blue.opacity(0.6) : Color.gray.opacity(0.35),
+                        lineWidth: isFocused ? 1.5 : 1
+                    )
+            )
+            .cornerRadius(6)
+            .frame(height: 28)
+            .frame(width: width)
+    }
+}
+
+/// 表单区块：标签 + 内容垂直排列，标签到内容间距 6pt
+struct FormSection<Content: View>: View {
+    let label: String
+    let content: Content
+
+    init(_ label: String, @ViewBuilder content: () -> Content) {
+        self.label = label
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            FormLabel(text: label)
+            content
+        }
+    }
+}
+
+/// 表单卡片容器：统一内边距 12pt、圆角 8pt、可见边框
+struct FormCard<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .padding(12)
+            .background(Color(nsColor: .controlBackgroundColor))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.gray.opacity(0.18), lineWidth: 0.5)
+            )
     }
 }
 

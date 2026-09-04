@@ -150,14 +150,10 @@ struct SettingsView: View {
     // MARK: - 添加表单行（展开时显示）
 
     private var sectorAddRow: some View {
-        HStack(spacing: 6) {
-            TextField("代码 (BK0475)", text: $newSectorCode)
-                .textFieldStyle(.roundedBorder)
-                .controlSize(.small)
+        HStack(spacing: 8) {
+            FormTextField(placeholder: "代码 (BK0475)", text: $newSectorCode)
                 .onSubmit { addSector() }
-            TextField("名称 (半导体)", text: $newSectorName)
-                .textFieldStyle(.roundedBorder)
-                .controlSize(.small)
+            FormTextField(placeholder: "名称 (半导体)", text: $newSectorName)
                 .onSubmit { addSector() }
             Button {
                 addSector()
@@ -172,14 +168,10 @@ struct SettingsView: View {
     }
 
     private var fundAddRow: some View {
-        HStack(spacing: 6) {
-            TextField("代码 (161725)", text: $newFundCode)
-                .textFieldStyle(.roundedBorder)
-                .controlSize(.small)
+        HStack(spacing: 8) {
+            FormTextField(placeholder: "代码 (161725)", text: $newFundCode)
                 .onSubmit { addFund() }
-            TextField("名称 (招商中证白酒指数C)", text: $newFundName)
-                .textFieldStyle(.roundedBorder)
-                .controlSize(.small)
+            FormTextField(placeholder: "名称 (招商中证白酒指数C)", text: $newFundName)
                 .onSubmit { addFund() }
             Button {
                 addFund()

@@ -139,7 +139,7 @@ struct AlertGroupView: View {
                         .padding(.vertical, 1)
                         .background(hasTriggered ? Color.orange.opacity(0.15) : Color.secondary.opacity(0.12))
                         .foregroundColor(hasTriggered ? .orange : .secondary)
-                        .cornerRadius(999)
+                        .cornerRadius(6)
                     Spacer()
                     Text(groupUnit)
                         .font(.system(size: 10))
@@ -236,7 +236,7 @@ struct AlertRuleRow: View {
                         .padding(.vertical, 1)
                         .foregroundColor(directionColor)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 4)
+                            RoundedRectangle(cornerRadius: 6)
                                 .stroke(directionColor.opacity(0.45), lineWidth: 0.8)
                         )
                     Text(formatThreshold(rule))
@@ -336,8 +336,7 @@ struct AddAlertSheet: View {
                 .font(.headline)
 
             // 标的类型
-            VStack(alignment: .leading, spacing: 4) {
-                Text("标的类型").font(.caption).foregroundColor(.secondary)
+            FormSection("标的类型") {
                 Picker("", selection: $targetType) {
                     Text("金CNY").tag(AlertTargetType.goldCNY)
                     Text("板块").tag(AlertTargetType.sector)
@@ -359,8 +358,7 @@ struct AddAlertSheet: View {
 
             // 板块/基金选择
             if targetType == .sector || targetType == .fund {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("选择标的").font(.caption).foregroundColor(.secondary)
+                FormSection("选择标的") {
                     if targetType == .sector {
                         Picker("", selection: $targetCode) {
                             ForEach(controller.configStore.config.sectors, id: \.code) { s in
@@ -387,8 +385,7 @@ struct AddAlertSheet: View {
 
             // 基金预警基准（仅基金）
             if targetType == .fund {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("预警基准").font(.caption).foregroundColor(.secondary)
+                FormSection("预警基准") {
                     Picker("", selection: $fundMetric) {
                         ForEach(FundMetric.allCases, id: \.self) { m in
                             Text(m.rawValue).tag(m)
@@ -411,9 +408,8 @@ struct AddAlertSheet: View {
             }
 
             // 方向 + 阈值
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("方向").font(.caption).foregroundColor(.secondary)
+            HStack(spacing: 12) {
+                FormSection("方向") {
                     Picker("", selection: $direction) {
                         Text("≥ 涨到").tag(AlertDirection.above)
                         Text("≤ 跌到").tag(AlertDirection.below)
@@ -422,19 +418,14 @@ struct AddAlertSheet: View {
                     .frame(width: 120)
                 }
                 Spacer()
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("阈值").font(.caption).foregroundColor(.secondary)
-                    TextField(thresholdPlaceholder, text: $threshold)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 100)
+                FormSection("阈值") {
+                    FormTextField(placeholder: thresholdPlaceholder, text: $threshold, width: 100)
                 }
             }
 
             // 动作提示
-            VStack(alignment: .leading, spacing: 4) {
-                Text("提醒文案（动作提示）").font(.caption).foregroundColor(.secondary)
-                TextField("第1档止盈 · 建议卖1/3", text: $label)
-                    .textFieldStyle(.roundedBorder)
+            FormSection("提醒文案（动作提示）") {
+                FormTextField(placeholder: "第1档止盈 · 建议卖1/3", text: $label)
             }
 
             Spacer()
