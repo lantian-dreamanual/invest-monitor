@@ -12,6 +12,7 @@ struct TrendChart: View {
     var mode: TrendChartMode = .aStock
 
     @State private var hoverX: Double? = nil  // 鼠标在 Canvas 内的 x 坐标
+    @State private var lastHoverUpdate: Date = .distantPast  // 方案B：hover 重绘节流
 
     var body: some View {
         if trend.points.isEmpty {
@@ -30,9 +31,16 @@ struct TrendChart: View {
             .onContinuousHover { phase in
                 switch phase {
                 case .active(let location):
-                    hoverX = location.x
+                    // 方案B：对 hover 更新做节流，避免高频移动鼠标时不断触发 Canvas 全量重绘
+                    let now = Date()
+                    guard now.timeIntervalSince(lastHoverUpdate) >= 0.033 else { return }
+                    lastHoverUpdate = now
+                    // 仅在 x 坐标变化时才触发重绘，避免无谓的 state 更新
+                    if abs((hoverX ?? .infinity) - location.x) >= 0.5 {
+                        hoverX = location.x
+                    }
                 case .ended:
-                    hoverX = nil
+                    if hoverX != nil { hoverX = nil }
                 }
             }
         }

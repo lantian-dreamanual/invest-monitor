@@ -87,7 +87,7 @@ struct MainPanelView: View {
 
     // Tab 切换
     private var content: some View {
-        VStack {
+        VStack(spacing: 0) {
             Picker("", selection: $tab) {
                 ForEach(Tab.allCases, id: \.self) { t in
                     Text(t.rawValue).tag(t)
@@ -96,21 +96,35 @@ struct MainPanelView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
             .padding(.top, 8)
+            .padding(.bottom, 6)
 
-            // 板块页内多板块切换
-            if tab == .cpo && controller.configStore.config.sectors.count > 1 {
+            // 板块页内多板块切换（常驻保留，仅在板块 Tab 时可见可交互）
+            if controller.configStore.config.sectors.count > 1 {
                 sectorPicker
+                    .opacity(tab == .cpo ? 1 : 0)
+                    .allowsHitTesting(tab == .cpo)
+                    .accessibilityHidden(tab != .cpo)
             }
 
-            switch tab {
-            case .gold:
+            // 三个 Tab 常驻保留，切换用 opacity + allowsHitTesting 控制显隐，
+            // 避免每次切换销毁重建视图导致的卡顿
+            ZStack {
                 GoldView(controller: controller)
-            case .cpo:
+                    .opacity(tab == .gold ? 1 : 0)
+                    .allowsHitTesting(tab == .gold)
+                    .accessibilityHidden(tab != .gold)
                 SectorView(controller: controller)
-            case .fund:
+                    .opacity(tab == .cpo ? 1 : 0)
+                    .allowsHitTesting(tab == .cpo)
+                    .accessibilityHidden(tab != .cpo)
                 FundView(controller: controller)
+                    .opacity(tab == .fund ? 1 : 0)
+                    .allowsHitTesting(tab == .fund)
+                    .accessibilityHidden(tab != .fund)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(maxWidth: .infinity)
     }
 
     // 板块切换 Picker
@@ -121,8 +135,9 @@ struct MainPanelView: View {
             }
         }
         .pickerStyle(.menu)
-        .onChange(of: controller.currentSectorCode) { _ in
-            Task { await controller.refresh() }
+        .onChange(of: controller.currentSectorCode) { newCode in
+            // 方案C：切换板块只刷新当前板块相关数据，不再触发全量 refresh
+            Task { await controller.refreshSector(code: newCode) }
         }
         .padding(.horizontal, 16)
         .padding(.top, 6)

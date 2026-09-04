@@ -391,6 +391,29 @@ final class MenuBarController: NSObject, ObservableObject {
         await refresh()
     }
 
+    /// 方案C：切换板块时只刷新当前板块相关数据（指数 + 成分股 + 分时线），
+    /// 不触发黄金/基金的增量请求，降低板块切换时的卡顿
+    @MainActor
+    func refreshSector(code: String) async {
+        guard !isRefreshing else { return }
+        isRefreshing = true
+        defer { isRefreshing = false }
+
+        let sectorName = configStore.config.sectors.first(where: { $0.code == code })?.name ?? ""
+        do {
+            async let sectorTask = sectorService.fetchIndex(code: code, name: sectorName)
+            async let stocksTask = sectorService.fetchStocks(code: code)
+            async let trendsTask = sectorService.fetchTrends(code: code, name: sectorName)
+            let (s, st, td) = try await (sectorTask, stocksTask, trendsTask)
+            self.sector = s
+            self.sectorStocks = st
+            self.trendData = td
+        } catch {
+            // 板块切换失败保留旧数据，不阻塞主流程
+            self.errorMessage = "板块刷新失败（已显示上次数据）"
+        }
+    }
+
     // MARK: - 预警
 
     /// 预警检查：比对最新数据与所有规则，触发通知 + 管理状态
