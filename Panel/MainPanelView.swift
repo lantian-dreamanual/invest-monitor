@@ -44,7 +44,7 @@ struct MainPanelView: View {
     // 顶部标题栏：正常态「投资监控 + 倒计时 + 齿轮」，设置态「设置 + 叉号」
     private var header: some View {
         HStack {
-            Text(showSettings ? "设置" : "投资监控")
+            Text(showSettings ? "设置" : "Dreamanual投资监控")
                 .font(.headline)
             Spacer()
             if showSettings {

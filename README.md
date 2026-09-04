@@ -1,3 +1,14 @@
+---
+AIGC:
+  ContentProducer: '001191110102MAD55U9H0F10002'
+  ContentPropagator: '001191110102MAD55U9H0F10002'
+  Label: '1'
+  ProduceID: '9971a141-9679-446e-845f-2fd11588c8e3'
+  PropagateID: '9971a141-9679-446e-845f-2fd11588c8e3'
+  ReservedCode1: 'fe82dc0e-b35f-48f2-8650-323375e73f59'
+  ReservedCode2: 'fe82dc0e-b35f-48f2-8650-323375e73f59'
+---
+
 # Dreamanual 投资监控
 
 macOS 菜单栏投资监控工具，实时追踪黄金价格、A股板块行情与基金净值，支持多档止盈止损预警通知。
@@ -56,8 +67,8 @@ macOS 菜单栏投资监控工具，实时追踪黄金价格、A股板块行情�
 
 ### 方式一：下载 DMG（推荐）
 
-1. 从 [dist/](dist/) 目录下载最新 DMG 文件（[Dreamanual投资监控-v1.0.dmg](dist/Dreamanual投资监控-v1.0.dmg)）
-2. 打开 DMG，将 Dreamanual投资监控.app 拖入「应用程序」文件夹
+1. 从 [dist/](dist/) 目录下载最新 DMG 文件（[Dreamanual Invest Monitor-v1.0.dmg](dist/Dreamanual%20Invest%20Monitor-v1.0.dmg)）
+2. 打开 DMG，将 Dreamanual Invest Monitor.app 拖入「应用程序」文件夹
 3. 首次启动需在系统设置 → 隐私与安全性中允许运行
 4. 首次启动会请求通知权限，点击「允许」即可
 
@@ -83,7 +94,7 @@ xcrun swiftc -O \
   Panel/SectorView.swift \
   Panel/SettingsView.swift \
   Panel/TrendChart.swift \
-  -o InvestMonitor \
+  -o "Dreamanual Invest Monitor.app/Contents/MacOS/InvestMonitor" \
   -framework AppKit -framework SwiftUI -framework Combine -framework UserNotifications
 ```
 
@@ -144,3 +155,5 @@ InvestmentBar/
 ## 许可证
 
 MIT License
+
+> AI生成
