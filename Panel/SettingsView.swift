@@ -214,8 +214,16 @@ struct SettingsView: View {
                                             .foregroundColor(statusColor(controller.updateChecker.manualCheckStatus))
                                     }
                                 }
-                                Button("立即检查") {
-                                    controller.updateChecker.manualCheck()
+                                Button {
+                                    if controller.updateChecker.manualCheckStatus == .newVersion,
+                                       let info = controller.updateChecker.availableUpdate,
+                                       let url = URL(string: info.downloadUrl) {
+                                        NSWorkspace.shared.open(url)
+                                    } else {
+                                        controller.updateChecker.manualCheck()
+                                    }
+                                } label: {
+                                    Text(controller.updateChecker.manualCheckStatus == .newVersion ? "下载更新" : "立即检查")
                                 }
                                 .buttonStyle(.bordered)
                                 .controlSize(.small)
