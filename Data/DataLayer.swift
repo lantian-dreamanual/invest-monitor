@@ -275,15 +275,20 @@ actor SectorService {
     }
 
     /// 拉取黄金分时线数据（沪金主连 113.aum，CNY/g）
+    /// ndays=1 在周末/非交易日只返回最近夜盘段，缺少日盘数据，因此用 ndays=2 取更多数据，
+    /// 再按交易日分组筛选出最近一个有日盘数据的完整交易日。
     func fetchGoldTrends() async throws -> TrendData {
-        let url = URL(string: "https://push2his.eastmoney.com/api/qt/stock/trends2/get?secid=113.aum&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13&fields2=f51,f52,f53,f54,f55,f56,f57,f58&iscr=0&ndays=1")!
+        let url = URL(string: "https://push2his.eastmoney.com/api/qt/stock/trends2/get?secid=113.aum&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13&fields2=f51,f52,f53,f54,f55,f56,f57,f58&iscr=0&ndays=2")!
         let json = try await NetworkClient.getJSON(url: url)
         guard let data = json["data"] as? [String: Any],
               let preClose = (data["preClose"] as? Double) ?? (data["preClose"] as? NSNumber)?.doubleValue,
               let trends = data["trends"] as? [String] else {
             throw FetchError.invalidData("黄金分时线解析失败")
         }
-        var points: [TrendPoint] = []
+
+        // 解析原始数据点，保留完整 "YYYY-MM-DD HH:mm" 用于跨日夜盘映射
+        struct RawPoint { let dt: String; let close: Double; let avg: Double; let vol: Double; let amt: Double }
+        var raw: [RawPoint] = []
         for line in trends {
             let parts = line.split(separator: ",").map(String.init)
             guard parts.count >= 8,
@@ -291,9 +296,51 @@ actor SectorService {
                   let avg = Double(parts[7]),
                   let vol = Double(parts[5]),
                   let amt = Double(parts[6]) else { continue }
-            // 保留完整 "YYYY-MM-DD HH:mm" 用于夜盘跨日映射
-            let timeStr = parts[0]
-            points.append(TrendPoint(time: timeStr, price: close, avgPrice: avg, volume: vol, amount: amt))
+            raw.append(RawPoint(dt: parts[0], close: close, avg: avg, vol: vol, amt: amt))
+        }
+
+        // 按交易日分组：夜盘 21:00-23:59 归次日，00:00-02:30 和日盘 09:00-15:00 归当日
+        let dfmt = DateFormatter()
+        dfmt.dateFormat = "yyyy-MM-dd"
+        dfmt.timeZone = TimeZone(identifier: "Asia/Shanghai")
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "Asia/Shanghai")!
+
+        var groups: [String: [RawPoint]] = [:]
+        for pt in raw {
+            let segs = pt.dt.split(separator: " ")
+            let dateStr = String(segs[0])
+            let timeStr = segs.count > 1 ? String(segs[1]) : ""
+            let hour = Int(timeStr.split(separator: ":").first ?? "0") ?? 0
+
+            let tradingDay: String
+            if hour >= 21, let d = dfmt.date(from: dateStr), let next = cal.date(byAdding: .day, value: 1, to: d) {
+                tradingDay = dfmt.string(from: next)
+            } else {
+                tradingDay = dateStr
+            }
+            groups[tradingDay, default: []].append(pt)
+        }
+
+        // 优先选择最近一个有日盘数据（09:00-15:00）的交易日；否则回退到最近交易日
+        let sortedDays = groups.keys.sorted(by: >)
+        var selected: String?
+        for day in sortedDays {
+            let hasDay = (groups[day] ?? []).contains { pt in
+                let segs = pt.dt.split(separator: " ")
+                guard segs.count > 1 else { return false }
+                let h = Int(segs[1].split(separator: ":").first ?? "0") ?? 0
+                return h >= 9 && h < 15
+            }
+            if hasDay { selected = day; break }
+        }
+        if selected == nil { selected = sortedDays.first }
+
+        let picked = selected.flatMap { groups[$0] } ?? raw
+        let sortedPts = picked.sorted { $0.dt < $1.dt }
+        var points: [TrendPoint] = []
+        for pt in sortedPts {
+            points.append(TrendPoint(time: pt.dt, price: pt.close, avgPrice: pt.avg, volume: pt.vol, amount: pt.amt))
         }
         return TrendData(name: "沪金主连", preClose: preClose, points: points)
     }
