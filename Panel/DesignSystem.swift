@@ -38,17 +38,34 @@ extension Color {
     static let cardBorder = Color(red: 0.212, green: 0.220, blue: 0.235)
 }
 
+/// 交易状态
+enum MarketStatus: Equatable {
+    case trading   // 交易中
+    case break_    // 午休
+    case closed    // 已收盘
+}
+
 /// 交易状态标签
 struct MarketStatusBadge: View {
-    let isOpen: Bool
+    let status: MarketStatus
+
+    private var text: String {
+        switch status {
+        case .trading: return "交易中"
+        case .break_: return "午休"
+        case .closed: return "已收盘"
+        }
+    }
+
+    private var isTrading: Bool { status == .trading }
 
     var body: some View {
-        Text(isOpen ? "交易中" : "已收盘")
+        Text(text)
             .font(.system(size: 10, weight: .medium))
             .padding(.horizontal, 6)
             .padding(.vertical, 1)
-            .background(isOpen ? Color.brandGold.opacity(0.15) : Color.panelBackground)
-            .foregroundColor(isOpen ? .brandGold : .secondary.opacity(0.55))
+            .background(isTrading ? Color.brandGold.opacity(0.15) : Color.panelBackground)
+            .foregroundColor(isTrading ? .brandGold : .secondary.opacity(0.55))
             .cornerRadius(6)
     }
 }
@@ -281,7 +298,7 @@ struct SettingsCard<Content: View>: View {
 /// 统一行情头部：标签 + 状态 → 大价格 → 涨跌 + 次要信息
 struct PriceHeader: View {
     let title: String
-    let marketOpen: Bool?           // nil = 不显示状态标签
+    let marketStatus: MarketStatus?      // nil = 不显示状态标签
     let price: String               // 格式化后的价格文本
     let changePct: Double           // 涨跌幅 %
     let secondary: String?          // 可选次要信息，如 "成交额 12.3亿"
@@ -293,8 +310,8 @@ struct PriceHeader: View {
                 Text(title)
                     .font(.caption)
                     .foregroundColor(.secondary)
-                if let open = marketOpen {
-                    MarketStatusBadge(isOpen: open)
+                if let status = marketStatus {
+                    MarketStatusBadge(status: status)
                 }
             }
 

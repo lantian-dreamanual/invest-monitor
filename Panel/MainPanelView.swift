@@ -77,7 +77,11 @@ struct MainPanelView: View {
                 .help("返回")
             } else {
                 if controller.allMarketsClosed {
-                    Text("已收盘")
+                    Text(controller.panelStatusText)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary.opacity(0.55))
+                } else if controller.countdown == 0 {
+                    Text(controller.panelStatusText)
                         .font(.system(size: 11))
                         .foregroundColor(.secondary.opacity(0.55))
                 } else if controller.isLoading {
@@ -220,7 +224,7 @@ struct GoldView: View {
                     MarketCard {
                         PriceHeader(
                             title: "沪金主连 (CNY/g)",
-                            marketOpen: controller.isGoldMarketOpen,
+                            marketStatus: controller.goldMarketStatus,
                             price: String(format: "¥%.2f", g.priceCNY),
                             changePct: g.changePct,
                             secondary: nil

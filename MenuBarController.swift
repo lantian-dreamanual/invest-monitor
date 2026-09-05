@@ -34,8 +34,9 @@ final class MenuBarController: NSObject, ObservableObject {
     @Published var alertConfig: AlertConfig
     // 刷新倒计时（秒），右上角展示「x 秒后更新」
     @Published var countdown = 30
-    // 全部休市时为 true，右上角显示「已收盘」而非倒计时
+    // 右上角状态文案
     @Published var allMarketsClosed = false
+    @Published var panelStatusText: String = ""
     /// 通知点击后待切换的 Tab（nil 表示无需切换）
     @Published var pendingTab: MainPanelView.Tab?
     /// 版本更新检查器
@@ -250,26 +251,30 @@ final class MenuBarController: NSObject, ObservableObject {
     // MARK: - 定时器
 
     /// 黄金交易时段：夜盘 21:00-02:30 + 日盘 09:00-15:00
-    var isGoldMarketOpen: Bool {
+    var goldMarketStatus: MarketStatus {
         let cal = Calendar.current
         let now = cal.component(.hour, from: Date()) * 60 + cal.component(.minute, from: Date())
-        if now >= 21 * 60 || now <= 2 * 60 + 30 { return true }
-        if now >= 9 * 60 && now <= 15 * 60 { return true }
-        return false
+        if now >= 21 * 60 || now <= 2 * 60 + 30 { return .trading }
+        if now >= 9 * 60 && now <= 15 * 60 { return .trading }
+        return .closed
     }
 
     /// A股交易时段：09:30-11:30 + 13:00-15:00
-    var isStockMarketOpen: Bool {
+    var stockMarketStatus: MarketStatus {
         let cal = Calendar.current
+        let weekday = cal.component(.weekday, from: Date())
+        // 周末休市
+        guard weekday != 1 && weekday != 7 else { return .closed }
         let now = cal.component(.hour, from: Date()) * 60 + cal.component(.minute, from: Date())
-        if now >= 9 * 60 + 30 && now <= 11 * 60 + 30 { return true }
-        if now >= 13 * 60 && now <= 15 * 60 { return true }
-        return false
+        if now >= 9 * 60 + 30 && now <= 11 * 60 + 30 { return .trading }
+        if now > 11 * 60 + 30 && now < 13 * 60 { return .break_ }
+        if now >= 13 * 60 && now <= 15 * 60 { return .trading }
+        return .closed
     }
 
     /// 任一市场在交易时段则刷新；全部休市则停止
     private var anyMarketOpen: Bool {
-        isGoldMarketOpen || isStockMarketOpen
+        goldMarketStatus == .trading || stockMarketStatus == .trading
     }
 
     /// 后台常驻定时器：任一市场交易时段每 30 秒刷新，全部休市时自动暂停
@@ -289,20 +294,30 @@ final class MenuBarController: NSObject, ObservableObject {
         Task { await refresh() }
     }
 
-    /// 每秒倒计时，驱动右上角文案；全部休市时显示「已收盘」
+    /// 每秒倒计时，驱动右上角文案
     private func startCountdownTimer() {
         guard countdownTimer == nil else { return }
         let t = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             guard let self else { return }
-            let closed = !self.anyMarketOpen
-            self.allMarketsClosed = closed
-            if closed {
+            let gold = self.goldMarketStatus
+            let stock = self.stockMarketStatus
+            let anyTrading = gold == .trading || stock == .trading
+            let anyBreak = gold == .break_ || stock == .break_
+
+            if anyTrading {
+                self.allMarketsClosed = false
+                if self.isLoading { return }
+                self.countdown -= 1
+                if self.countdown <= 0 { self.countdown = 30 }
+            } else if anyBreak {
+                self.allMarketsClosed = false
                 self.countdown = 0
-                return
+                self.panelStatusText = "午休"
+            } else {
+                self.allMarketsClosed = true
+                self.countdown = 0
+                self.panelStatusText = "已收盘"
             }
-            if self.isLoading { return } // 刷新中不递减
-            self.countdown -= 1
-            if self.countdown <= 0 { self.countdown = 30 }
         }
         t.tolerance = 0.2
         RunLoop.main.add(t, forMode: .common)

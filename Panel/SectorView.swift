@@ -13,7 +13,7 @@ struct SectorView: View {
                     MarketCard {
                         PriceHeader(
                             title: "\(s.name) 板块指数",
-                            marketOpen: controller.isStockMarketOpen,
+                            marketStatus: controller.stockMarketStatus,
                             price: Format.price(s.index),
                             changePct: s.changePct,
                             secondary: nil
