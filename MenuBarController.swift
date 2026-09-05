@@ -130,12 +130,17 @@ final class MenuBarController: NSObject, ObservableObject {
         NSApp.terminate(nil)
     }
 
-    /// 更新状态栏文字：▲ 938.22
+    /// 更新状态栏文字：交易时段显示箭头+价格，收盘只显示价格
     func updateStatusTitle() {
         guard let button = statusItem.button else { return }
         if let g = gold {
-            let arrow = g.changePct >= 0 ? "▲" : "▼"
-            let title = String(format: "%@ %.2f", arrow, g.priceCNY)
+            let title: String
+            if goldMarketStatus == .trading || goldMarketStatus == .delayed {
+                let arrow = g.changePct >= 0 ? "▲" : "▼"
+                title = String(format: "%@ %.2f", arrow, g.priceCNY)
+            } else {
+                title = String(format: "%.2f", g.priceCNY)
+            }
             button.attributedTitle = NSAttributedString(
                 string: title,
                 attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)]
