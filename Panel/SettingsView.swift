@@ -480,32 +480,41 @@ private struct DonationPopover: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            // 分段切换
+            // 分段切换（与面板 Tab 样式统一：浅灰底色 + 亮金字）
             HStack(spacing: 0) {
                 ForEach(SettingsView.DonationTab.allCases, id: \.self) { t in
+                    let selected = t == tab
                     Button {
                         withAnimation(.easeInOut(duration: 0.15)) {
                             tab = t
                         }
                     } label: {
                         Text(t.rawValue)
-                            .font(.system(size: 12, weight: tab == t ? .semibold : .regular))
-                            .foregroundColor(tab == t ? Color(red: 0.95, green: 0.81, blue: 0.20) : .secondary)
+                            .font(.system(size: 12, weight: selected ? .medium : .regular))
+                            .foregroundColor(selected ? Color.brandGoldBright : .secondary)
+                            .lineLimit(1)
                             .frame(maxWidth: .infinity)
+                            .padding(.horizontal, 12)
                             .padding(.vertical, 6)
                             .background(
-                                RoundedRectangle(cornerRadius: 5)
-                                    .fill(tab == t ? Color(red: 0.26, green: 0.21, blue: 0.11) : Color.clear)
+                                RoundedRectangle(cornerRadius: 7)
+                                    .fill(Color.zebraLight)
+                                    .opacity(selected ? 1 : 0)
                             )
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(3)
             .background(
                 RoundedRectangle(cornerRadius: 7)
-                    .fill(Color(red: 0.14, green: 0.16, blue: 0.17))
+                    .fill(Color.panelBackground)
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 7)
+                    .stroke(Color.zebraLight, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 7))
 
             // 二维码图片
             Group {
@@ -534,7 +543,7 @@ private struct DonationPopover: View {
         }
         .padding(16)
         .frame(width: 232)
-        .background(Color(red: 0.137, green: 0.157, blue: 0.173))
+        .background(Color.panelBackground)
     }
 
     private func loadDonationImage(named: String) -> NSImage? {
