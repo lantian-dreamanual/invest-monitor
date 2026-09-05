@@ -14,6 +14,24 @@ struct TrendChart: View {
     @State private var hoverX: Double? = nil  // 鼠标在 Canvas 内的 x 坐标
     @State private var lastHoverUpdate: Date = .distantPast  // 方案B：hover 重绘节流
 
+    /// 从最后一个数据点提取截止时间文案，如 "09/05 02:30" 或 "14:59"
+    private var lastUpdateText: String {
+        guard let last = trend.points.last else { return "" }
+        let raw = last.time
+        // shfeGold 模式保留完整 "YYYY-MM-DD HH:mm"，aStock 模式只有 "HH:mm"
+        if let spaceIdx = raw.firstIndex(of: " ") {
+            let dateStr = String(raw[..<spaceIdx])           // 2026-09-05
+            let timeStr = String(raw[raw.index(after: spaceIdx)...])  // 02:30
+            // 提取 MM/DD
+            let parts = dateStr.split(separator: "-")
+            if parts.count >= 3 {
+                return "\(parts[1])/\(parts[2]) \(timeStr)"
+            }
+            return timeStr
+        }
+        return raw
+    }
+
     var body: some View {
         if trend.points.isEmpty {
             Text("暂无分时数据")
@@ -21,27 +39,37 @@ struct TrendChart: View {
                 .foregroundColor(.secondary)
                 .frame(height: 130)
         } else {
-            Canvas { context, size in
-                drawChart(context: context, size: size)
-                if let hx = hoverX {
-                    drawHover(context: context, size: size, mouseX: hx)
-                }
-            }
-            .frame(height: 130)
-            .onContinuousHover { phase in
-                switch phase {
-                case .active(let location):
-                    // 方案B：对 hover 更新做节流，避免高频移动鼠标时不断触发 Canvas 全量重绘
-                    let now = Date()
-                    guard now.timeIntervalSince(lastHoverUpdate) >= 0.033 else { return }
-                    lastHoverUpdate = now
-                    // 仅在 x 坐标变化时才触发重绘，避免无谓的 state 更新
-                    if abs((hoverX ?? .infinity) - location.x) >= 0.5 {
-                        hoverX = location.x
+            VStack(spacing: 0) {
+                Canvas { context, size in
+                    drawChart(context: context, size: size)
+                    if let hx = hoverX {
+                        drawHover(context: context, size: size, mouseX: hx)
                     }
-                case .ended:
-                    if hoverX != nil { hoverX = nil }
                 }
+                .frame(height: 130)
+                .onContinuousHover { phase in
+                    switch phase {
+                    case .active(let location):
+                        // 方案B：对 hover 更新做节流，避免高频移动鼠标时不断触发 Canvas 全量重绘
+                        let now = Date()
+                        guard now.timeIntervalSince(lastHoverUpdate) >= 0.033 else { return }
+                        lastHoverUpdate = now
+                        // 仅在 x 坐标变化时才触发重绘，避免无谓的 state 更新
+                        if abs((hoverX ?? .infinity) - location.x) >= 0.5 {
+                            hoverX = location.x
+                        }
+                    case .ended:
+                        if hoverX != nil { hoverX = nil }
+                    }
+                }
+                // 数据截止时间提示
+                HStack(spacing: 0) {
+                    Spacer()
+                    Text("数据截止 \(lastUpdateText)")
+                        .font(.system(size: 9))
+                        .foregroundColor(.secondary.opacity(0.6))
+                }
+                .padding(.top, 2)
             }
         }
     }
