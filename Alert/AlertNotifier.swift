@@ -8,6 +8,9 @@ import UserNotifications
 final class AlertNotifier: NSObject, UNUserNotificationCenterDelegate {
     static let shared = AlertNotifier()
 
+    /// 通知点击回调：传递规则 ID
+    var onNotificationTap: ((String) -> Void)?
+
     /// UN 通知是否可用（授权通过且能弹 banner）
     /// 首次发通知后通过 getDeliveredNotifications 验证
     private var unAvailable: Bool?
@@ -150,5 +153,16 @@ final class AlertNotifier: NSObject, UNUserNotificationCenterDelegate {
     ) {
         // 始终显示通知，即使 App 在前台
         completionHandler([.banner, .sound])
+    }
+
+    /// 用户点击通知时调用：提取规则 ID，回调打开面板并切换到对应 Tab
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let ruleId = response.notification.request.identifier
+        onNotificationTap?(ruleId)
+        completionHandler()
     }
 }

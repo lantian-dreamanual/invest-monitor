@@ -36,6 +36,8 @@ final class MenuBarController: NSObject, ObservableObject {
     @Published var countdown = 30
     // 全部休市时为 true，右上角显示「已收盘」而非倒计时
     @Published var allMarketsClosed = false
+    /// 通知点击后待切换的 Tab（nil 表示无需切换）
+    @Published var pendingTab: MainPanelView.Tab?
 
     private var statusItem: NSStatusItem!
     private var panel: NSPanel!
@@ -64,6 +66,12 @@ final class MenuBarController: NSObject, ObservableObject {
         }.store(in: &cancellables)
         // 请求通知权限
         notifier.requestPermission()
+        // 通知点击回调：通过规则 ID 查找标的类型，切换到对应 Tab 并打开面板
+        notifier.onNotificationTap = { [weak self] ruleId in
+            DispatchQueue.main.async {
+                self?.handleNotificationTap(ruleId: ruleId)
+            }
+        }
         setupStatusItem()
         setupPanel()
         startTimer()
@@ -448,6 +456,34 @@ final class MenuBarController: NSObject, ObservableObject {
         for i in resetIdx {
             alertConfig.updateStatus(at: i, triggered: false)
         }
+    }
+
+    /// 通知点击：通过规则 ID 查找标的类型，切换到对应 Tab 并打开面板
+    private func handleNotificationTap(ruleId: String) {
+        // 查找规则
+        guard let rule = alertConfig.rules.first(where: { $0.id == ruleId }) else {
+            // 找不到规则（可能已删除），仅打开面板
+            showPanel()
+            return
+        }
+
+        // 根据标的类型决定切换到哪个 Tab
+        switch rule.targetType {
+        case .goldCNY:
+            pendingTab = .gold
+        case .sector:
+            pendingTab = .cpo
+            // 如果规则关联的板块不是当前板块，切换板块
+            if !rule.targetCode.isEmpty && rule.targetCode != currentSectorCode {
+                currentSectorCode = rule.targetCode
+                Task { await refreshSector(code: rule.targetCode) }
+            }
+        case .fund:
+            pendingTab = .fund
+        }
+
+        // 打开面板
+        showPanel()
     }
 
     private var isRefreshing = false

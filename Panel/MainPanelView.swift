@@ -39,6 +39,19 @@ struct MainPanelView: View {
         }
         .frame(width: 400, height: 500)
         .background(Color.panelBackground)
+        .onReceive(controller.$pendingTab) { target in
+            if let target = target {
+                // 通知点击触发的 Tab 切换：先退出设置页（如果在），再切 Tab
+                if showSettings { showSettings = false }
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    tab = target
+                }
+                // 清空标记，避免重复触发
+                DispatchQueue.main.async {
+                    controller.pendingTab = nil
+                }
+            }
+        }
     }
 
     // 顶部标题栏：正常态「投资监控 + 倒计时 + 齿轮」，设置态「设置 + 叉号」
