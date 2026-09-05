@@ -17,6 +17,16 @@ struct MainPanelView: View {
         VStack(spacing: 0) {
             header
             Divider()
+            // 更新提示横幅（仅在非设置页且有新版本时显示）
+            if !showSettings, let update = controller.updateChecker.availableUpdate {
+                UpdateBanner(
+                    version: update.version,
+                    notes: update.notes,
+                    downloadUrl: update.downloadUrl,
+                    onIgnore: { controller.updateChecker.ignoreCurrentVersion() }
+                )
+                Divider()
+            }
             if showSettings {
                 SettingsView(controller: controller)
             } else {
@@ -143,8 +153,59 @@ struct MainPanelView: View {
         .padding(.horizontal, 16)
         .padding(.top, 6)
     }
+}
 
+/// 更新提示横幅
+struct UpdateBanner: View {
+    let version: String
+    let notes: String?
+    let downloadUrl: String
+    let onIgnore: () -> Void
 
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "arrow.up.circle.fill")
+                .font(.system(size: 16))
+                .foregroundColor(.brandGold)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("发现新版本 v\(version)")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.primary)
+                if let notes, !notes.isEmpty {
+                    Text(notes)
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer()
+
+            Button {
+                if let url = URL(string: downloadUrl) { NSWorkspace.shared.open(url) }
+            } label: {
+                Text("下载更新")
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+            .tint(Color.brandGold)
+
+            Button {
+                onIgnore()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("忽略此版本")
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color(red: 0.18, green: 0.20, blue: 0.22))
+    }
 }
 
 /// 黄金页

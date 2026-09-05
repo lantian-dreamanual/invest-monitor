@@ -166,6 +166,61 @@ struct SettingsView: View {
                     }
                 }
 
+                // ===== 关于 =====
+                VStack(alignment: .leading, spacing: 5) {
+                    sectionHeader(title: "关于", trailing: EmptyView())
+
+                    SettingsCard {
+                        VStack(spacing: 0) {
+                            // 版本号
+                            HStack {
+                                Text("当前版本")
+                                    .font(.system(size: 13))
+                                Spacer()
+                                Text("v\(controller.updateChecker.currentVersion)")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
+
+                            Divider().opacity(0.4)
+
+                            // 自动检查更新开关
+                            HStack {
+                                Text("自动检查更新")
+                                    .font(.system(size: 13))
+                                Spacer()
+                                Toggle("", isOn: Binding(
+                                    get: { controller.updateChecker.autoCheckEnabled },
+                                    set: { controller.updateChecker.autoCheckEnabled = $0 }
+                                ))
+                                .labelsHidden()
+                                .toggleStyle(GoldToggleStyle())
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
+                            .contentShape(Rectangle())
+
+                            Divider().opacity(0.4)
+
+                            // 立即检查
+                            HStack {
+                                Text("检查最新版本")
+                                    .font(.system(size: 13))
+                                Spacer()
+                                Button("立即检查") {
+                                    controller.updateChecker.manualCheck()
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
+                        }
+                    }
+                }
+
                 // ===== 赞赏 =====
                 HStack {
                     Spacer()

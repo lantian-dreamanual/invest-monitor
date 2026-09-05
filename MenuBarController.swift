@@ -38,6 +38,8 @@ final class MenuBarController: NSObject, ObservableObject {
     @Published var allMarketsClosed = false
     /// 通知点击后待切换的 Tab（nil 表示无需切换）
     @Published var pendingTab: MainPanelView.Tab?
+    /// 版本更新检查器
+    @Published var updateChecker = UpdateChecker()
 
     private var statusItem: NSStatusItem!
     private var panel: NSPanel!
@@ -75,6 +77,14 @@ final class MenuBarController: NSObject, ObservableObject {
         setupStatusItem()
         setupPanel()
         startTimer()
+        // 启动后延迟 2 秒检查更新（避免与启动刷新竞争网络）
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            self?.updateChecker.checkForUpdate()
+        }
+        // 每 6 小时定时检查一次
+        Timer.scheduledTimer(withTimeInterval: 6 * 3600, repeats: true) { [weak self] _ in
+            self?.updateChecker.checkForUpdate()
+        }
     }
 
     // MARK: - 状态栏
@@ -232,6 +242,8 @@ final class MenuBarController: NSObject, ObservableObject {
             if btnFrame.contains(mouseLoc) { return }
         }
         if panel.frame.contains(mouseLoc) { return }
+        // 点击落在本 App 的其他窗口（如 SwiftUI Popover、Alert 弹窗等）时不关闭
+        if NSApp.windows.contains(where: { $0.isVisible && $0.frame.contains(mouseLoc) }) { return }
         closePanel()
     }
 
