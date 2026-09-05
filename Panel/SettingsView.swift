@@ -27,6 +27,13 @@ struct SettingsView: View {
     @State private var showAddFund = false
     @State private var showAddAlert = false
     @State private var message: String?
+    @State private var showDonation = false
+    @State private var donationTab: DonationTab = .wechat
+
+    enum DonationTab: String, CaseIterable {
+        case wechat = "微信"
+        case alipay = "支付宝"
+    }
 
     var body: some View {
         ScrollView {
@@ -156,6 +163,26 @@ struct SettingsView: View {
 
                     SettingsCard {
                         AlertRuleList(controller: controller)
+                    }
+                }
+
+                // ===== 赞赏 =====
+                HStack {
+                    Spacer()
+                    Button {
+                        showDonation.toggle()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "cup.and.saucer.fill")
+                                .font(.system(size: 11))
+                            Text("请我喝杯咖啡")
+                                .font(.system(size: 12))
+                        }
+                        .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showDonation, arrowEdge: .bottom) {
+                        DonationPopover(tab: $donationTab)
                     }
                 }
 
@@ -388,5 +415,78 @@ struct SettingsView: View {
                 .help("用代码作为名称添加")
             }
         }
+    }
+}
+
+// MARK: - 赞赏 Popover
+
+private struct DonationPopover: View {
+    @Binding var tab: SettingsView.DonationTab
+
+    var body: some View {
+        VStack(spacing: 12) {
+            // 分段切换
+            HStack(spacing: 0) {
+                ForEach(SettingsView.DonationTab.allCases, id: \.self) { t in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            tab = t
+                        }
+                    } label: {
+                        Text(t.rawValue)
+                            .font(.system(size: 12, weight: tab == t ? .semibold : .regular))
+                            .foregroundColor(tab == t ? Color(red: 0.95, green: 0.81, blue: 0.20) : .secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 5)
+                                    .fill(tab == t ? Color(red: 0.26, green: 0.21, blue: 0.11) : Color.clear)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(3)
+            .background(
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(Color(red: 0.14, green: 0.16, blue: 0.17))
+            )
+
+            // 二维码图片
+            Group {
+                if let img = loadDonationImage(named: tab == .wechat ? "donation_wechat" : "donation_alipay") {
+                    Image(nsImage: img)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 200)
+                        .cornerRadius(6)
+                } else {
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.2))
+                        .frame(width: 200, height: 200)
+                        .cornerRadius(6)
+                        .overlay(
+                            Text("图片加载失败")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                        )
+                }
+            }
+
+            Text("感谢支持")
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+        }
+        .padding(16)
+        .frame(width: 232)
+        .background(Color(red: 0.137, green: 0.157, blue: 0.173))
+    }
+
+    private func loadDonationImage(named: String) -> NSImage? {
+        if let bundlePath = Bundle.main.path(forResource: named, ofType: "png"),
+           let img = NSImage(contentsOfFile: bundlePath) {
+            return img
+        }
+        return nil
     }
 }
