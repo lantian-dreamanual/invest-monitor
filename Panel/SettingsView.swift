@@ -27,12 +27,6 @@ struct SettingsView: View {
     @State private var showAddFund = false
     @State private var showAddAlert = false
     @State private var message: String?
-    @State private var showDonation = false
-
-    enum DonationTab: String, CaseIterable {
-        case wechat = "微信"
-        case alipay = "支付宝"
-    }
 
     var body: some View {
         ScrollView {
@@ -237,7 +231,9 @@ struct SettingsView: View {
                 HStack {
                     Spacer()
                     Button {
-                        showDonation.toggle()
+                        if let url = URL(string: "https://afdian.com/a/wuyifa001") {
+                            NSWorkspace.shared.open(url)
+                        }
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "cup.and.saucer.fill")
@@ -262,9 +258,6 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity)
         .sheet(isPresented: $showAddAlert) {
             AddAlertSheet(controller: controller, isPresented: $showAddAlert)
-        }
-        .sheet(isPresented: $showDonation) {
-            DonationSheet(isPresented: $showDonation)
         }
     }
 
@@ -504,111 +497,5 @@ struct SettingsView: View {
                 .help("用代码作为名称添加")
             }
         }
-    }
-}
-
-// MARK: - 赞赏 Sheet
-
-private struct DonationSheet: View {
-    @Binding var isPresented: Bool
-    @State private var tab: SettingsView.DonationTab = .wechat
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // 标题行
-            HStack {
-                Text("赞赏支持")
-                    .font(.headline)
-                Spacer()
-                Button {
-                    isPresented = false
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-
-            // 分段切换（与面板 Tab 样式统一：浅灰底色 + 亮金字）
-            HStack(spacing: 0) {
-                ForEach(SettingsView.DonationTab.allCases, id: \.self) { t in
-                    let selected = t == tab
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            tab = t
-                        }
-                    } label: {
-                        Text(t.rawValue)
-                            .font(.system(size: 12, weight: selected ? .medium : .regular))
-                            .foregroundColor(selected ? Color.brandGoldBright : .secondary)
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 7)
-                                    .fill(Color.zebraLight)
-                                    .opacity(selected ? 1 : 0)
-                            )
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .background(
-                RoundedRectangle(cornerRadius: 7)
-                    .fill(Color.panelBackground)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 7)
-                    .stroke(Color.zebraLight, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 7))
-
-            // 二维码图片
-            HStack {
-                Spacer()
-                Group {
-                    if let img = loadDonationImage(named: tab == .wechat ? "donation_wechat" : "donation_alipay") {
-                        Image(nsImage: img)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 200)
-                            .cornerRadius(6)
-                    } else {
-                        Rectangle()
-                            .fill(Color.secondary.opacity(0.2))
-                            .frame(width: 200, height: 200)
-                            .cornerRadius(6)
-                            .overlay(
-                                Text("图片加载失败")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                            )
-                    }
-                }
-                Spacer()
-            }
-
-            HStack {
-                Spacer()
-                Text("感谢支持")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-                Spacer()
-            }
-        }
-        .padding(16)
-        .frame(width: 300)
-        .fixedSize(horizontal: false, vertical: true)
-    }
-
-    private func loadDonationImage(named: String) -> NSImage? {
-        if let bundlePath = Bundle.main.path(forResource: named, ofType: "png"),
-           let img = NSImage(contentsOfFile: bundlePath) {
-            return img
-        }
-        return nil
     }
 }
