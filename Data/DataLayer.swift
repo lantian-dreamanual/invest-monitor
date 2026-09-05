@@ -267,8 +267,8 @@ actor SectorService {
                   let avg = Double(parts[7]),
                   let vol = Double(parts[5]),
                   let amt = Double(parts[6]) else { continue }
-            // 时间只取 HH:mm
-            let timeStr = parts[0].split(separator: " ").last.map(String.init) ?? parts[0]
+            // 保留完整 "YYYY-MM-DD HH:mm" 用于截止时间提示
+            let timeStr = parts[0]
             points.append(TrendPoint(time: timeStr, price: close, avgPrice: avg, volume: vol, amount: amt))
         }
         return TrendData(name: name, preClose: preClose, points: points)

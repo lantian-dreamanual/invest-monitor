@@ -78,7 +78,14 @@ struct TrendChart: View {
 
     /// A股交易分钟数（09:30=0, 11:30=120, 13:00=120, 15:00=240）
     private func tradingMinutes(_ time: String) -> Double {
-        let parts = time.split(separator: ":")
+        // 兼容 "YYYY-MM-DD HH:mm" 和 "HH:mm" 两种格式
+        let timePart: String
+        if let spaceIdx = time.firstIndex(of: " ") {
+            timePart = String(time[time.index(after: spaceIdx)...])
+        } else {
+            timePart = time
+        }
+        let parts = timePart.split(separator: ":")
         guard parts.count == 2, let h = Double(parts[0]), let m = Double(parts[1]) else { return 0 }
         let totalMin = (h * 60 + m) - (9 * 60 + 30)
         if totalMin > 120 { return totalMin - 90 }
