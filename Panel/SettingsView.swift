@@ -208,11 +208,24 @@ struct SettingsView: View {
                                 Text("检查最新版本")
                                     .font(.system(size: 13))
                                 Spacer()
+                                // 状态反馈
+                                if controller.updateChecker.manualCheckStatus != .idle {
+                                    if controller.updateChecker.manualCheckStatus == .checking {
+                                        Text("检查中…")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.secondary)
+                                    } else {
+                                        Text(statusText(controller.updateChecker.manualCheckStatus))
+                                            .font(.system(size: 11))
+                                            .foregroundColor(statusColor(controller.updateChecker.manualCheckStatus))
+                                    }
+                                }
                                 Button("立即检查") {
                                     controller.updateChecker.manualCheck()
                                 }
                                 .buttonStyle(.bordered)
                                 .controlSize(.small)
+                                .disabled(controller.updateChecker.isChecking)
                             }
                             .padding(.horizontal, 14)
                             .padding(.vertical, 9)
@@ -263,6 +276,27 @@ struct SettingsView: View {
                 .foregroundColor(.primary)
             Spacer()
             trailing
+        }
+    }
+
+    // MARK: - 更新检查状态文案
+
+    private func statusText(_ status: UpdateChecker.ManualCheckStatus) -> String {
+        switch status {
+        case .idle: return ""
+        case .checking: return "检查中…"
+        case .upToDate: return "已是最新版本"
+        case .newVersion: return "发现新版本"
+        case .failed: return "检查失败，稍后再试"
+        }
+    }
+
+    private func statusColor(_ status: UpdateChecker.ManualCheckStatus) -> Color {
+        switch status {
+        case .upToDate: return .green
+        case .newVersion: return .brandGold
+        case .failed: return .red
+        default: return .secondary
         }
     }
 

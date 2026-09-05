@@ -381,12 +381,13 @@ struct AddAlertSheet: View {
             // 方向 + 阈值
             HStack(spacing: 12) {
                 FormSection("方向") {
-                    Picker("", selection: $direction) {
-                        Text("≥ 涨到").tag(AlertDirection.above)
-                        Text("≤ 跌到").tag(AlertDirection.below)
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 120)
+                    SegmentedTabs(
+                        items: [AlertDirection.above, AlertDirection.below],
+                        selection: $direction,
+                        label: { d in d == .above ? "≥ 涨到" : "≤ 跌到" },
+                        style: .compact
+                    )
+                    .frame(width: 160)
                 }
                 Spacer()
                 FormSection("阈值") {
@@ -411,6 +412,7 @@ struct AddAlertSheet: View {
                     isPresented = false
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(Color.brandGold)
                 .disabled(threshold.isEmpty || label.isEmpty)
             }
         }
@@ -599,6 +601,7 @@ struct EditAlertSheet: View {
                     isPresented = false
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(Color.brandGold)
                 .disabled(threshold.isEmpty || label.isEmpty)
             }
         }

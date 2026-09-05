@@ -22,8 +22,21 @@ final class UpdateChecker: ObservableObject {
     /// 检测到新版本时赋值，UI 据此显示横幅
     @Published var availableUpdate: UpdateInfo?
 
-    /// 是否正在检查中（用于调试，UI 不展示）
+    /// 是否正在检查中
     @Published private(set) var isChecking = false
+
+    /// 手动检查的状态反馈（设置页「立即检查」按钮旁展示）
+    enum ManualCheckStatus: Equatable {
+        case idle       // 未检查
+        case checking   // 检查中
+        case upToDate   // 已是最新
+        case newVersion // 发现新版本
+        case failed     // 检查失败
+    }
+    @Published var manualCheckStatus: ManualCheckStatus = .idle
+
+    /// 标记当前检查是否由手动触发（用于结果反馈）
+    private var isManualCheck = false
 
     /// 当前 app 版本号（从 Info.plist 读取）
     let currentVersion: String
@@ -64,9 +77,23 @@ final class UpdateChecker: ObservableObject {
 
     // MARK: - 版本检查
 
-    /// 执行一次版本检查：A 源优先 → B 源备用 → 均失败静默跳过
+    /// 自动检查（受 autoCheckEnabled 开关控制）
     func checkForUpdate() {
         guard autoCheckEnabled else { return }
+        performCheck()
+    }
+
+    /// 手动触发检查（设置页「立即检查」按钮，不受 autoCheckEnabled 限制）
+    func manualCheck() {
+        guard !isChecking else { return }
+        availableUpdate = nil
+        ignoredVersion = nil
+        isManualCheck = true
+        manualCheckStatus = .checking
+        performCheck()
+    }
+
+    private func performCheck() {
         guard !isChecking else { return }
         isChecking = true
 
@@ -87,9 +114,13 @@ final class UpdateChecker: ObservableObject {
                 return
             }
 
-            // 双源均失败：静默跳过
+            // 双源均失败
             await MainActor.run {
                 self.isChecking = false
+                if self.isManualCheck {
+                    self.manualCheckStatus = .failed
+                    self.isManualCheck = false
+                }
             }
         }
     }
@@ -155,14 +186,26 @@ final class UpdateChecker: ObservableObject {
             // 版本号对比：远程 > 本地 才提示
             guard self.isNewer(info.version, than: self.currentVersion) else {
                 self.availableUpdate = nil
+                if self.isManualCheck {
+                    self.manualCheckStatus = .upToDate
+                    self.isManualCheck = false
+                }
                 return
             }
             // 用户已忽略此版本 → 不提示
             if info.version == self.ignoredVersion {
                 self.availableUpdate = nil
+                if self.isManualCheck {
+                    self.manualCheckStatus = .upToDate
+                    self.isManualCheck = false
+                }
                 return
             }
             self.availableUpdate = info
+            if self.isManualCheck {
+                self.manualCheckStatus = .newVersion
+                self.isManualCheck = false
+            }
         }
     }
 
@@ -188,12 +231,5 @@ final class UpdateChecker: ObservableObject {
             ignoredVersion = info.version
             availableUpdate = nil
         }
-    }
-
-    /// 手动触发检查（设置页「立即检查」按钮）
-    func manualCheck() {
-        availableUpdate = nil
-        ignoredVersion = nil  // 手动检查清除忽略记录
-        checkForUpdate()
     }
 }
