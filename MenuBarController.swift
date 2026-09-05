@@ -130,10 +130,14 @@ final class MenuBarController: NSObject, ObservableObject {
         NSApp.terminate(nil)
     }
 
-    /// 更新状态栏文字：交易时段显示箭头+价格，收盘只显示价格
+    /// 更新状态栏文字：根据配置显示黄金或板块指数，交易时段带箭头
     func updateStatusTitle() {
         guard let button = statusItem.button else { return }
-        if let g = gold {
+        let source = configStore.config.statusBarSource ?? "gold"
+
+        if source == "gold" {
+            // 黄金
+            guard let g = gold else { button.title = "--"; return }
             let title: String
             if goldMarketStatus == .trading || goldMarketStatus == .delayed {
                 let arrow = g.changePct >= 0 ? "▲" : "▼"
@@ -146,7 +150,20 @@ final class MenuBarController: NSObject, ObservableObject {
                 attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)]
             )
         } else {
-            button.title = "--"
+            // 板块指数
+            guard let s = allSectors.first(where: { $0.code == source }) ?? sector
+            else { button.title = "--"; return }
+            let title: String
+            if stockMarketStatus == .trading {
+                let arrow = s.changePct >= 0 ? "▲" : "▼"
+                title = String(format: "%@ %.2f", arrow, s.index)
+            } else {
+                title = String(format: "%.2f", s.index)
+            }
+            button.attributedTitle = NSAttributedString(
+                string: title,
+                attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)]
+            )
         }
     }
 

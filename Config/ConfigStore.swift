@@ -18,6 +18,8 @@ struct FundConfig: Codable, Identifiable, Hashable {
 struct WatchConfig: Codable {
     var sectors: [SectorConfig]
     var funds: [FundConfig]
+    /// 状态栏显示来源：nil = 黄金，板块代码 = 对应板块指数
+    var statusBarSource: String?
 
     static let `default` = WatchConfig(
         sectors: [
@@ -29,7 +31,8 @@ struct WatchConfig: Codable {
             FundConfig(code: "161725", name: "招商中证白酒指数C"),
             FundConfig(code: "110011", name: "易方达蓝筹精选"),
             FundConfig(code: "005827", name: "易方达蓝筹精选C"),
-        ]
+        ],
+        statusBarSource: nil
     )
 }
 

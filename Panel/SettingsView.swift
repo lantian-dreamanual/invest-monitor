@@ -144,6 +144,37 @@ struct SettingsView: View {
                     }
                 }
 
+                // ===== 状态栏显示 =====
+                VStack(alignment: .leading, spacing: 5) {
+                    sectionHeader(title: "状态栏显示", trailing: EmptyView())
+
+                    SettingsCard {
+                        VStack(spacing: 0) {
+                            HStack {
+                                Text("显示内容")
+                                    .font(.system(size: 13))
+                                Spacer()
+                                Picker("", selection: Binding(
+                                    get: { controller.configStore.config.statusBarSource ?? "gold" },
+                                    set: { newValue in
+                                        controller.configStore.config.statusBarSource = (newValue == "gold") ? nil : newValue
+                                        controller.updateStatusTitle()
+                                    }
+                                )) {
+                                    Text("黄金(CNY/g)").tag("gold")
+                                    ForEach(controller.configStore.config.sectors) { sector in
+                                        Text(sector.name).tag(sector.code)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .controlSize(.small)
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
+                        }
+                    }
+                }
+
                 // ===== 预警规则 =====
                 VStack(alignment: .leading, spacing: 5) {
                     sectionHeader(
