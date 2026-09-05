@@ -28,7 +28,6 @@ struct SettingsView: View {
     @State private var showAddAlert = false
     @State private var message: String?
     @State private var showDonation = false
-    @State private var donationTab: DonationTab = .wechat
 
     enum DonationTab: String, CaseIterable {
         case wechat = "微信"
@@ -236,9 +235,7 @@ struct SettingsView: View {
                         .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
-                    .popover(isPresented: $showDonation, arrowEdge: .bottom) {
-                        DonationPopover(tab: $donationTab)
-                    }
+                    Spacer()
                 }
 
                 if let m = message {
@@ -252,6 +249,9 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity)
         .sheet(isPresented: $showAddAlert) {
             AddAlertSheet(controller: controller, isPresented: $showAddAlert)
+        }
+        .sheet(isPresented: $showDonation) {
+            DonationSheet(isPresented: $showDonation)
         }
     }
 
@@ -473,13 +473,29 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - 赞赏 Popover
+// MARK: - 赞赏 Sheet
 
-private struct DonationPopover: View {
-    @Binding var tab: SettingsView.DonationTab
+private struct DonationSheet: View {
+    @Binding var isPresented: Bool
+    @State private var tab: SettingsView.DonationTab = .wechat
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 12) {
+            // 标题行
+            HStack {
+                Text("赞赏支持")
+                    .font(.headline)
+                Spacer()
+                Button {
+                    isPresented = false
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+
             // 分段切换（与面板 Tab 样式统一：浅灰底色 + 亮金字）
             HStack(spacing: 0) {
                 ForEach(SettingsView.DonationTab.allCases, id: \.self) { t in
@@ -517,33 +533,41 @@ private struct DonationPopover: View {
             .clipShape(RoundedRectangle(cornerRadius: 7))
 
             // 二维码图片
-            Group {
-                if let img = loadDonationImage(named: tab == .wechat ? "donation_wechat" : "donation_alipay") {
-                    Image(nsImage: img)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 200)
-                        .cornerRadius(6)
-                } else {
-                    Rectangle()
-                        .fill(Color.secondary.opacity(0.2))
-                        .frame(width: 200, height: 200)
-                        .cornerRadius(6)
-                        .overlay(
-                            Text("图片加载失败")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                        )
+            HStack {
+                Spacer()
+                Group {
+                    if let img = loadDonationImage(named: tab == .wechat ? "donation_wechat" : "donation_alipay") {
+                        Image(nsImage: img)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 200)
+                            .cornerRadius(6)
+                    } else {
+                        Rectangle()
+                            .fill(Color.secondary.opacity(0.2))
+                            .frame(width: 200, height: 200)
+                            .cornerRadius(6)
+                            .overlay(
+                                Text("图片加载失败")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                            )
+                    }
                 }
+                Spacer()
             }
 
-            Text("感谢支持")
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
+            HStack {
+                Spacer()
+                Text("感谢支持")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
         }
         .padding(16)
-        .frame(width: 232)
-        .background(Color.panelBackground)
+        .frame(width: 300, height: 380)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private func loadDonationImage(named: String) -> NSImage? {
