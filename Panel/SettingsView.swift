@@ -566,7 +566,7 @@ private struct DonationSheet: View {
             }
         }
         .padding(16)
-        .frame(width: 300, height: 380)
+        .frame(width: 300)
         .fixedSize(horizontal: false, vertical: true)
     }
 
