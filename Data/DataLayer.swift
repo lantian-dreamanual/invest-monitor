@@ -252,7 +252,7 @@ actor SectorService {
 
     /// 拉取板块分时线数据（当日全天，每分钟一笔）
     func fetchTrends(code: String, name: String) async throws -> TrendData {
-        let url = URL(string: "https://push2his.eastmoney.com/api/qt/stock/trends2/get?secid=90.\(code)&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13&fields2=f51,f52,f53,f54,f55,f56,f57,f58&iscr=0&ndays=1")!
+        let url = URL(string: "https://push2delay.eastmoney.com/api/qt/stock/trends2/get?secid=90.\(code)&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13&fields2=f51,f52,f53,f54,f55,f56,f57,f58&iscr=0&ndays=1")!
         let json = try await NetworkClient.getJSON(url: url)
         guard let data = json["data"] as? [String: Any],
               let preClose = (data["preClose"] as? Double) ?? (data["preClose"] as? NSNumber)?.doubleValue,
@@ -278,7 +278,7 @@ actor SectorService {
     /// ndays=1 在周末/非交易日只返回最近夜盘段，缺少日盘数据，因此用 ndays=2 取更多数据，
     /// 再按交易日分组筛选出最近一个有日盘数据的完整交易日。
     func fetchGoldTrends() async throws -> TrendData {
-        let url = URL(string: "https://push2his.eastmoney.com/api/qt/stock/trends2/get?secid=113.aum&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13&fields2=f51,f52,f53,f54,f55,f56,f57,f58&iscr=0&ndays=2")!
+        let url = URL(string: "https://push2delay.eastmoney.com/api/qt/stock/trends2/get?secid=113.aum&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13&fields2=f51,f52,f53,f54,f55,f56,f57,f58&iscr=0&ndays=2")!
         let json = try await NetworkClient.getJSON(url: url)
         guard let data = json["data"] as? [String: Any],
               let preClose = (data["preClose"] as? Double) ?? (data["preClose"] as? NSNumber)?.doubleValue,
