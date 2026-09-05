@@ -6,104 +6,108 @@ struct SectorView: View {
     @ObservedObject var controller: MenuBarController
 
     var body: some View {
-        VStack(spacing: 0) {
-            if let s = controller.sector {
-                sectorHeader(s)
-            } else {
-                ProgressView("加载中…")
-                    .frame(height: 90)
-            }
-
-            // 分时线图
-            if let td = controller.trendData {
-                TrendChart(trend: td)
-                    .padding(.horizontal, 16)
-            }
-
-            Divider()
-                .padding(.top, 4)
-
-            if controller.sectorStocks.isEmpty {
-                VStack(spacing: 8) {
-                    Spacer()
-                    ProgressView("加载成分股…")
-                    Spacer()
+        ScrollView {
+            VStack(spacing: 14) {
+                if let s = controller.sector {
+                    // 板块指数头部卡片
+                    MarketCard {
+                        PriceHeader(
+                            title: "\(s.name) 板块指数",
+                            marketOpen: controller.isStockMarketOpen,
+                            price: Format.price(s.index),
+                            changePct: s.changePct,
+                            secondary: nil
+                        )
+                    }
                 }
-            } else {
-                stockHeader
-                Divider()
-                ScrollView {
-                    LazyVStack(spacing: 0) {
+
+                // 分时线图卡片
+                if let td = controller.trendData {
+                    MarketCard {
+                        TrendChart(trend: td)
+                    }
+                }
+
+                // 成分股列表卡片（系统设置列表风格：无额外内边距，行自带左右 padding）
+                if controller.sectorStocks.isEmpty {
+                    MarketCard {
+                        HStack {
+                            Spacer()
+                            ProgressView("加载成分股…")
+                            Spacer()
+                        }
+                        .frame(height: 60)
+                    }
+                } else {
+                    VStack(spacing: 0) {
+                        stockHeader
+                        Divider().opacity(0.5)
                         ForEach(Array(controller.sectorStocks.enumerated()), id: \.element.code) { idx, st in
-                            StockRow(rank: idx + 1, stock: st)
+                            StockRow(rank: idx + 1, stock: st, isZebra: idx % 2 == 0)
                             if idx < controller.sectorStocks.count - 1 {
                                 Divider().opacity(0.5)
                             }
                         }
                     }
+                    .background(Color.zebraLight)
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.cardBorder, lineWidth: 0.5)
+                    )
                 }
             }
+            .padding(14)
         }
         .frame(maxWidth: .infinity)
-    }
-
-    // 板块指数头部
-    private func sectorHeader(_ s: SectorQuote) -> some View {
-        PriceHeader(
-            title: "\(s.name) 板块指数",
-            marketOpen: controller.isStockMarketOpen,
-            price: Format.price(s.index),
-            changePct: s.changePct,
-            secondary: "成交额 \(Format.amount(s.amount))"
-        )
     }
 
     private var stockHeader: some View {
         HStack(spacing: 8) {
             Text("#")
-                .frame(width: 24, alignment: .leading)
-            Text("名称").frame(width: 76, alignment: .leading)
+                .frame(width: 28, alignment: .leading)
+            Text("名称").frame(width: 84, alignment: .leading)
             Spacer()
-            Text("现价").frame(width: 58, alignment: .trailing)
-            Text("涨跌%").frame(width: 58, alignment: .trailing)
-            Text("成交额").frame(width: 60, alignment: .trailing)
+            Text("现价").frame(width: 62, alignment: .trailing)
+            Text("涨跌%").frame(width: 62, alignment: .trailing)
+            Text("成交额").frame(width: 64, alignment: .trailing)
         }
-        .font(.caption2)
-        .foregroundColor(.secondary)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 5)
+        .font(.system(size: 12, weight: .medium))
+        .foregroundColor(.primary.opacity(0.7))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color.zebraLight)
     }
 
 }
 
-/// 个股行
-struct StockRow: View {
-    let rank: Int
-    let stock: StockQuote
+    /// 个股行（统一字号，保证等高）
+    struct StockRow: View {
+        let rank: Int
+        let stock: StockQuote
+        var isZebra: Bool = false
 
-    var body: some View {
-        HStack(spacing: 8) {            Text("\(rank)")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .frame(width: 24, alignment: .leading)
-            Text(stock.name)
-                .font(.callout)
-                .lineLimit(1)
-                .frame(width: 76, alignment: .leading)
-            Spacer()
-            Text(Format.price(stock.price))
-                .font(.callout)
-                .frame(width: 58, alignment: .trailing)
-            Text(Format.pct(stock.changePct))
-                .font(.callout)
-                .foregroundColor(Color.trend(stock.changePct))
-                .frame(width: 58, alignment: .trailing)
-            Text(Format.amount(stock.amount))
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .frame(width: 60, alignment: .trailing)
+        var body: some View {
+            HStack(spacing: 8) {
+                Text("\(rank)")
+                    .foregroundColor(.secondary)
+                    .frame(width: 28, alignment: .leading)
+                Text(stock.name)
+                    .lineLimit(1)
+                    .frame(width: 84, alignment: .leading)
+                Spacer()
+                Text(Format.price(stock.price))
+                    .frame(width: 62, alignment: .trailing)
+                Text(Format.pct(stock.changePct))
+                    .foregroundColor(Color.trend(stock.changePct))
+                    .frame(width: 62, alignment: .trailing)
+                Text(Format.amount(stock.amount))
+                    .foregroundColor(.secondary)
+                    .frame(width: 64, alignment: .trailing)
+            }
+            .font(.system(size: 12))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(isZebra ? Color.zebraDark : Color.zebraLight)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
     }
-}

@@ -1,7 +1,8 @@
 import SwiftUI
 import AppKit
 
-/// 基金页：净值 + 盘中估算 + 重仓跟踪
+/// 基金页：对齐黄金/板块页卡片风格，每只基金一张卡片
+/// 卡片内分区：净值信息区 → 重仓列表区（表头 + 行）
 struct FundView: View {
     @ObservedObject var controller: MenuBarController
 
@@ -23,26 +24,13 @@ struct FundView: View {
                     Spacer()
                 }
             } else {
-                if let err = controller.fundErrorMessage {
-                    HStack(spacing: 4) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 9))
-                            .foregroundColor(.orange)
-                        Text(err)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.top, 4)
-                }
                 ScrollView {
-                    LazyVStack(spacing: 12) {
+                    LazyVStack(spacing: 14) {
                         ForEach(controller.funds, id: \.quote.code) { fund in
                             FundCard(fund: fund, changes: controller.fundStockChanges)
                         }
                     }
-                    .padding(12)
+                    .padding(14)
                 }
             }
         }
@@ -50,103 +38,127 @@ struct FundView: View {
     }
 }
 
-/// 单只基金卡片
+/// 单只基金卡片：一张卡片内完成净值 + 盘中估算 + 重仓列表
 struct FundCard: View {
     let fund: FundDetail
     let changes: [String: Double]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // 标题行
-            HStack {
-                Text(fund.quote.name)
-                    .font(.headline)
-                    .lineLimit(1)
-                Spacer()
-                Text(fund.quote.code)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            // 净值 + 估算
-            HStack(alignment: .firstTextBaseline, spacing: 16) {
-                // 官方净值
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("官方净值 \(fund.quote.navDate)")
-                        .font(.caption2)
+        VStack(spacing: 0) {
+            // ===== 净值信息区 =====
+            VStack(alignment: .leading, spacing: 6) {
+                // 标题行：名称 + 代码
+                HStack(spacing: 8) {
+                    Text(fund.quote.name)
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                    Spacer()
+                    Text(fund.quote.code)
+                        .font(.system(size: 11))
                         .foregroundColor(.secondary)
-                    HStack(spacing: 4) {
-                        Text(Format.price(fund.quote.nav))
-                            .font(.title3.bold())
-                        Text(Format.pct(fund.quote.navChangePct))
-                            .font(.callout)
-                            .foregroundColor(Color.trend(fund.quote.navChangePct))
-                    }
                 }
 
-                Spacer()
+                // 净值大数 + 涨跌
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(Format.price(fund.quote.nav))
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundColor(Color.trend(fund.quote.navChangePct))
+                    Text(Format.pct(fund.quote.navChangePct))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Color.trend(fund.quote.navChangePct))
+                    Spacer()
+                }
+                .padding(.top, 2)
 
-                // 盘中估算
-                if let est = fund.estChangePct {
-                    VStack(alignment: .trailing, spacing: 2) {
+                // 净值日期 + 盘中估算（同行走尾，仅显示估算净值，不显示估算涨跌）
+                // 说明：估算涨跌基于今日重仓股行情，与官方净值涨跌（前一净值日基准）不同日，并排易混淆故去掉
+                HStack(spacing: 8) {
+                    Text("净值日期 \(fund.quote.navDate)")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary.opacity(0.55))
+                    Spacer()
+                    if let estNav = fund.estNav {
                         Text("盘中估算")
-                            .font(.caption2)
-                            .foregroundColor(.orange)
-                        HStack(spacing: 4) {
-                            if let estNav = fund.estNav {
-                                Text(Format.price(estNav))
-                                    .font(.title3.bold())
-                            }
-                            Text(Format.pct(est))
-                                .font(.callout)
-                                .foregroundColor(Color.trend(est))
-                        }
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary.opacity(0.55))
+                        Text(Format.price(estNav))
+                            .font(.system(size: 12, weight: .medium))
                     }
                 }
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
 
-            Divider()
-
-            // 重仓股实时
+            // ===== 重仓列表区 =====
+            Divider().opacity(0.5)
             if fund.holdings.isEmpty {
                 Text("暂无重仓数据")
-                    .font(.caption)
+                    .font(.system(size: 11))
                     .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
             } else {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("重仓")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    // 前 5 只重仓
-                    ForEach(fund.holdings.prefix(5), id: \.code) { h in
-                        HStack {
-                            Text(h.name)
-                                .font(.caption)
-                                .lineLimit(1)
-                            Text(String(format: "%.1f%%", h.weight))
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            if let pct = changes[FundEstimator.normalizeCode(h.code)] {
-                                Text(Format.pct(pct))
-                                    .font(.caption)
-                                    .foregroundColor(Color.trend(pct))
-                            } else {
-                                Text("--")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
+                holdingHeader
+                Divider().opacity(0.5)
+                let rows = Array(fund.holdings.prefix(5))
+                ForEach(Array(rows.enumerated()), id: \.element.code) { idx, h in
+                    holdingRow(idx: idx, holding: h)
+                    if idx < rows.count - 1 {
+                        Divider().opacity(0.5)
                     }
                 }
             }
         }
-        .padding(10)
-        .background(Color(nsColor: .controlBackgroundColor))
-        .cornerRadius(8)
+        .background(Color.cardBackground)
+        .cornerRadius(12)
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.gray.opacity(0.15), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.cardBorder, lineWidth: 0.5)
         )
+    }
+
+    /// 重仓列表表头
+    private var holdingHeader: some View {
+        HStack(spacing: 8) {
+            Text("#")
+                .frame(width: 28, alignment: .leading)
+            Text("名称").frame(width: 84, alignment: .leading)
+            Spacer()
+            Text("占比").frame(width: 48, alignment: .trailing)
+            Text("今日涨跌").frame(width: 62, alignment: .trailing)
+        }
+        .font(.system(size: 12, weight: .medium))
+        .foregroundColor(.primary.opacity(0.7))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color.zebraLight)
+    }
+
+    /// 单只重仓行（对齐板块成分股行样式）
+    private func holdingRow(idx: Int, holding: FundHolding) -> some View {
+        HStack(spacing: 8) {
+            Text("\(idx + 1)")
+                .foregroundColor(.secondary)
+                .frame(width: 28, alignment: .leading)
+            Text(holding.name)
+                .lineLimit(1)
+                .frame(width: 84, alignment: .leading)
+            Spacer()
+            Text(String(format: "%.1f%%", holding.weight))
+                .foregroundColor(.secondary)
+                .frame(width: 48, alignment: .trailing)
+            if let pct = changes[FundEstimator.normalizeCode(holding.code)] {
+                Text(Format.pct(pct))
+                    .foregroundColor(Color.trend(pct))
+                    .frame(width: 62, alignment: .trailing)
+            } else {
+                Text("--")
+                    .foregroundColor(.secondary)
+                    .frame(width: 62, alignment: .trailing)
+            }
+        }
+        .font(.system(size: 12))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
     }
 }

@@ -33,6 +33,12 @@ final class AlertConfig: ObservableObject {
         rules.removeAll { $0.id == rule.id }
     }
 
+    /// 更新规则（保留 id 与触发状态）
+    func update(_ rule: AlertRule) {
+        guard let i = rules.firstIndex(where: { $0.id == rule.id }) else { return }
+        rules[i] = rule
+    }
+
     func toggle(_ rule: AlertRule) {
         guard let i = rules.firstIndex(where: { $0.id == rule.id }) else { return }
         rules[i].enabled.toggle()

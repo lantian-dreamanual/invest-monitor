@@ -37,73 +37,59 @@ struct MainPanelView: View {
                 }
             }
         }
-        .frame(width: 380, height: 460)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .frame(width: 400, height: 500)
+        .background(Color.panelBackground)
     }
 
     // 顶部标题栏：正常态「投资监控 + 倒计时 + 齿轮」，设置态「设置 + 叉号」
     private var header: some View {
         HStack {
             Text(showSettings ? "设置" : "Dreamanual投资监控")
-                .font(.headline)
+                .font(.system(size: 15, weight: .semibold))
             Spacer()
             if showSettings {
-                Button {
+                IconButton(systemName: "xmark") {
                     showSettings = false
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 13))
                 }
-                .buttonStyle(.borderless)
                 .help("返回")
             } else {
                 if controller.allMarketsClosed {
                     Text("已收盘")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary.opacity(0.55))
                 } else if controller.isLoading {
                     Text("刷新中…")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary.opacity(0.55))
                 } else {
                     Text("\(controller.countdown) 秒后更新")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary.opacity(0.55))
                         .monospacedDigit()
                 }
-                Button {
+                IconButton(systemName: "gearshape") {
                     showSettings = true
-                } label: {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 13))
                 }
-                .buttonStyle(.borderless)
                 .help("设置")
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 
     // Tab 切换
     private var content: some View {
         VStack(spacing: 0) {
-            Picker("", selection: $tab) {
-                ForEach(Tab.allCases, id: \.self) { t in
-                    Text(t.rawValue).tag(t)
-                }
+            SegmentedTabs(items: Tab.allCases, selection: $tab) { t in
+                t.rawValue
             }
-            .pickerStyle(.segmented)
             .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 6)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
 
-            // 板块页内多板块切换（常驻保留，仅在板块 Tab 时可见可交互）
-            if controller.configStore.config.sectors.count > 1 {
+            // 板块页内多板块切换（仅板块 Tab 时显示，不占位）
+            if tab == .cpo && controller.configStore.config.sectors.count > 1 {
                 sectorPicker
-                    .opacity(tab == .cpo ? 1 : 0)
-                    .allowsHitTesting(tab == .cpo)
-                    .accessibilityHidden(tab != .cpo)
             }
 
             // 三个 Tab 常驻保留，切换用 opacity + allowsHitTesting 控制显隐，
@@ -129,10 +115,12 @@ struct MainPanelView: View {
 
     // 板块切换 Picker
     private var sectorPicker: some View {
-        Picker("板块", selection: $controller.currentSectorCode) {
+        Picker(selection: $controller.currentSectorCode) {
             ForEach(controller.configStore.config.sectors, id: \.code) { s in
                 Text(s.name).tag(s.code)
             }
+        } label: {
+            EmptyView()
         }
         .pickerStyle(.menu)
         .onChange(of: controller.currentSectorCode) { newCode in
@@ -151,28 +139,33 @@ struct GoldView: View {
     @ObservedObject var controller: MenuBarController
 
     var body: some View {
-        VStack(spacing: 0) {
-            if let g = controller.gold {
-                // 头部
-                PriceHeader(
-                    title: "沪金主连 (CNY/g)",
-                    marketOpen: controller.isGoldMarketOpen,
-                    price: String(format: "¥%.2f", g.priceCNY),
-                    changePct: g.changePct,
-                    secondary: nil
-                )
+        ScrollView {
+            VStack(spacing: 14) {
+                if let g = controller.gold {
+                    // 头部卡片
+                    MarketCard {
+                        PriceHeader(
+                            title: "沪金主连 (CNY/g)",
+                            marketOpen: controller.isGoldMarketOpen,
+                            price: String(format: "¥%.2f", g.priceCNY),
+                            changePct: g.changePct,
+                            secondary: nil
+                        )
+                    }
 
-                // 分时图
-                if let trend = controller.goldTrendData {
-                    TrendChart(trend: trend, mode: .shfeGold)
-                        .padding(.horizontal, 16)
+                    // 分时图卡片
+                    if let trend = controller.goldTrendData {
+                        MarketCard {
+                            TrendChart(trend: trend, mode: .shfeGold)
+                        }
+                    }
+                } else {
+                    ProgressView("加载中…")
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 80)
                 }
-
-                Spacer()
-            } else {
-                ProgressView("加载中…")
-                    .frame(maxHeight: .infinity)
             }
+            .padding(14)
         }
         .frame(maxWidth: .infinity)
     }

@@ -262,7 +262,7 @@ struct TrendChart: View {
             context.stroke(tickLine, with: .color(.gray.opacity(0.5)), style: StrokeStyle(lineWidth: 0.5))
             if !label.isEmpty {
                 context.draw(
-                    Text(label).font(.system(size: 8)).foregroundColor(.secondary),
+                    Text(label).font(.system(size: 9)).foregroundColor(.secondary),
                     at: CGPoint(x: x, y: chartY + chartH + 7),
                     anchor: ratio == 0 ? .topLeading : (ratio == 1.0 ? .topTrailing : .top)
                 )
@@ -330,7 +330,7 @@ struct TrendChart: View {
         lines.append(preCloseStr)
 
         let attrLines = lines.map {
-            Text($0).font(.system(size: 9)).foregroundColor(.white)
+            Text($0).font(.system(size: 10)).foregroundColor(.white)
         }
 
         // 解析测量气泡尺寸
@@ -352,9 +352,9 @@ struct TrendChart: View {
         }
         let bubbleY = max(chartY + 2, py - bubbleH - 4)
 
-        // 气泡背景
+        // 气泡背景（圆角）
         context.fill(
-            Path(CGRect(x: bubbleX, y: bubbleY, width: bubbleW, height: bubbleH)),
+            Path(roundedRect: CGRect(x: bubbleX, y: bubbleY, width: bubbleW, height: bubbleH), cornerRadius: 6),
             with: .color(.black.opacity(0.75))
         )
 

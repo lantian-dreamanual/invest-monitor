@@ -1,11 +1,9 @@
 import SwiftUI
 import AppKit
 
-/// 预警管理区块（嵌入设置页）：按标的分组展示 + 增删 + 暂停恢复 + 组折叠
-struct AlertView: View {
+/// 预警规则列表（嵌入设置页卡片内）：按标的分组展示 + 增删 + 组折叠
+struct AlertRuleList: View {
     @ObservedObject var controller: MenuBarController
-    @State private var showAddSheet = false
-    @State private var allPaused = false
     /// 折叠的组键（持久化）
     @AppStorage("com.dreamanual.investmonitor.CollapsedGroups") private var collapsedGroupsRaw = ""
 
@@ -14,29 +12,31 @@ struct AlertView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // 区块操作行：标题 + 暂停/恢复 + 添加
-            HStack {
-                Text("预警规则")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                Spacer()
-                Button(allPaused ? "全部恢复" : "全部暂停") {
-                    allPaused.toggle()
-                    controller.alertConfig.setAllEnabled(!allPaused)
+        VStack(spacing: 0) {
+            // 总开关行：全部规则一键启停，样式与单行开关一致
+            if !controller.alertConfig.rules.isEmpty {
+                HStack(spacing: 6) {
+                    Image(systemName: "bell.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .frame(width: 18)
+                    Text("全部规则")
+                        .font(.callout)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                    Spacer()
+                    Toggle("", isOn: Binding(
+                        get: { !controller.alertConfig.rules.allSatisfy { !$0.enabled } },
+                        set: { on in controller.alertConfig.setAllEnabled(on) }
+                    ))
+                    .toggleStyle(GoldToggleStyle())
+                    .labelsHidden()
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(controller.alertConfig.rules.isEmpty)
-
-                Button {
-                    showAddSheet = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .help("添加规则")
+                .padding(.horizontal, 10)
+                .frame(height: 38)
+                .background(Color.cardBackground)
+                Divider().opacity(0.6)
             }
 
             if controller.alertConfig.rules.isEmpty {
@@ -45,34 +45,28 @@ struct AlertView: View {
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                     Text("暂无预警规则，点击 + 添加")
-                        .font(.caption)
+                        .font(.system(size: 12))
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
             } else {
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(groups) { group in
+                VStack(spacing: 0) {
+                    ForEach(Array(groups.enumerated()), id: \.element.id) { idx, group in
                         AlertGroupView(
                             group: group,
                             controller: controller,
                             isCollapsed: collapsed.contains(group.id),
                             onToggleCollapse: { toggleCollapse(group.id) }
                         )
+                        if idx < groups.count - 1 {
+                            Divider().opacity(0.4)
+                        }
                     }
                 }
             }
         }
-        .frame(maxWidth: .infinity)
-        .sheet(isPresented: $showAddSheet) {
-            AddAlertSheet(controller: controller, isPresented: $showAddSheet)
-        }
-        .onAppear {
-            allPaused = controller.alertConfig.rules.allSatisfy { !$0.enabled }
-        }
     }
-
-    private var allTitles: String { allPaused ? "全部恢复" : "全部暂停" }
 
     // MARK: - 分组
 
@@ -87,7 +81,7 @@ struct AlertView: View {
         var order: [String] = []
         var dict: [String: [AlertRule]] = [:]
         for r in controller.alertConfig.rules {
-            let key = AlertView.groupKey(r)
+            let key = AlertRuleList.groupKey(r)
             if dict[key] == nil { order.append(key) }
             dict[key, default: []].append(r)
         }
@@ -111,7 +105,7 @@ struct AlertView: View {
 
 /// 标的分组：组头（图标 + 标的名 + 条数 + 折叠） + 组内规则行
 struct AlertGroupView: View {
-    let group: AlertView.RuleGroup
+    let group: AlertRuleList.RuleGroup
     @ObservedObject var controller: MenuBarController
     let isCollapsed: Bool
     let onToggleCollapse: () -> Void
@@ -125,7 +119,7 @@ struct AlertGroupView: View {
             Button(action: onToggleCollapse) {
                 HStack(spacing: 6) {
                     Image(systemName: groupIcon)
-                        .font(.system(size: 12))
+                        .font(.system(size: 10.5))
                         .foregroundColor(groupColor)
                         .frame(width: 18)
                     Text(group.name)
@@ -141,20 +135,17 @@ struct AlertGroupView: View {
                         .foregroundColor(hasTriggered ? .orange : .secondary)
                         .cornerRadius(6)
                     Spacer()
-                    Text(groupUnit)
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.secondary)
                         .rotationEffect(.degrees(isCollapsed ? 0 : 90))
                 }
                 .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .background(Color(nsColor: .windowBackgroundColor))
+                .frame(height: 38)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(false)
+            .background(Color.cardBackground)
 
             // 组内规则
             if !isCollapsed {
@@ -169,42 +160,25 @@ struct AlertGroupView: View {
                 }
             }
         }
-        .background(Color(nsColor: .controlBackgroundColor))
-        .cornerRadius(8)
+        .background(Color.clear)
+        .cornerRadius(10)
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.gray.opacity(allDisabled ? 0.1 : 0.18), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.cardBorder.opacity(allDisabled ? 0.5 : 1), lineWidth: 0.5)
         )
         .opacity(allDisabled ? 0.65 : 1)
     }
 
     private var groupIcon: String {
         switch group.targetType {
-        case .goldCNY: return "dollarsign.circle.fill"
-        case .sector: return "chart.line.uptrend.xyaxis"
+        case .goldCNY: return "scalemass.fill"
+        case .sector: return "square.grid.2x2.fill"
         case .fund: return "chart.pie.fill"
         }
     }
 
     private var groupColor: Color {
-        switch group.targetType {
-        case .goldCNY: return .orange
-        case .sector: return .blue
-        case .fund: return .purple
-        }
-    }
-
-    private var groupUnit: String {
-        switch group.targetType {
-        case .goldCNY: return "¥/克"
-        case .sector: return "%"
-        case .fund:
-            // 基金组按第一条规则基准显示单位
-            if group.rules.first?.fundMetric == .changePct {
-                return "基金 · %"
-            }
-            return "基金 · 净值"
-        }
+        .secondary
     }
 }
 
@@ -212,21 +186,10 @@ struct AlertGroupView: View {
 struct AlertRuleRow: View {
     let rule: AlertRule
     @ObservedObject var controller: MenuBarController
+    @State private var showEditSheet = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            // 状态点
-            Circle()
-                .fill(statusColor)
-                .frame(width: 6, height: 6)
-                .padding(.top, 9)
-                .overlay(
-                    Circle()
-                        .stroke(statusColor.opacity(0.25), lineWidth: 3)
-                        .frame(width: 12, height: 12)
-                        .padding(.top, 9)
-                )
-
             VStack(alignment: .leading, spacing: 3) {
                 // 第一行：方向徽标 + 阈值
                 HStack(spacing: 6) {
@@ -266,35 +229,37 @@ struct AlertRuleRow: View {
 
             Spacer(minLength: 4)
 
-            // 开关
+            // 开关（品牌金）
             Toggle("", isOn: Binding(
                 get: { rule.enabled },
                 set: { _ in controller.alertConfig.toggle(rule) }
             ))
+            .toggleStyle(GoldToggleStyle())
             .labelsHidden()
-            .controlSize(.mini)
-            .padding(.top, 5)
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .padding(.vertical, 8)
+        .background(Color.panelBackground)
         .contentShape(Rectangle())
         .contextMenu {
+            Button {
+                showEditSheet = true
+            } label: {
+                Label("编辑", systemImage: "pencil")
+            }
             Button(role: .destructive) {
                 controller.alertConfig.remove(rule)
             } label: {
-                Label("删除此规则", systemImage: "trash")
+                Label("删除", systemImage: "trash")
             }
+        }
+        .sheet(isPresented: $showEditSheet) {
+            EditAlertSheet(controller: controller, rule: rule, isPresented: $showEditSheet)
         }
     }
 
     private var directionText: String {
         rule.direction == .above ? "↑ 止盈" : "↓ 止损"
-    }
-
-    private var statusColor: Color {
-        if !rule.enabled { return .gray }
-        if rule.triggered { return .orange }
-        return .green
     }
 
     private var directionColor: Color {
@@ -337,12 +302,18 @@ struct AddAlertSheet: View {
 
             // 标的类型
             FormSection("标的类型") {
-                Picker("", selection: $targetType) {
-                    Text("金CNY").tag(AlertTargetType.goldCNY)
-                    Text("板块").tag(AlertTargetType.sector)
-                    Text("基金").tag(AlertTargetType.fund)
-                }
-                .pickerStyle(.segmented)
+                SegmentedTabs(
+                    items: [AlertTargetType.goldCNY, AlertTargetType.sector, AlertTargetType.fund],
+                    selection: $targetType,
+                    label: { t in
+                        switch t {
+                        case .goldCNY: return "金CNY"
+                        case .sector: return "板块"
+                        case .fund: return "基金"
+                        }
+                    },
+                    style: .compact
+                )
                 .onChange(of: targetType) { newType in
                     switch newType {
                     case .goldCNY: targetName = "黄金(CNY/g)"; targetCode = ""
@@ -386,12 +357,12 @@ struct AddAlertSheet: View {
             // 基金预警基准（仅基金）
             if targetType == .fund {
                 FormSection("预警基准") {
-                    Picker("", selection: $fundMetric) {
-                        ForEach(FundMetric.allCases, id: \.self) { m in
-                            Text(m.rawValue).tag(m)
-                        }
-                    }
-                    .pickerStyle(.segmented)
+                    SegmentedTabs(
+                        items: FundMetric.allCases,
+                        selection: $fundMetric,
+                        label: { $0.rawValue },
+                        style: .compact
+                    )
                     .onChange(of: fundMetric) { _ in
                         threshold = ""
                     }
@@ -482,4 +453,184 @@ struct AddAlertSheet: View {
         }
     }
 
+}
+
+/// 编辑规则弹窗（复用添加弹窗字段，预填当前值）
+struct EditAlertSheet: View {
+    @ObservedObject var controller: MenuBarController
+    let rule: AlertRule
+    @Binding var isPresented: Bool
+
+    @State private var targetType: AlertTargetType
+    @State private var targetCode: String
+    @State private var targetName: String
+    @State private var direction: AlertDirection
+    @State private var threshold: String
+    @State private var label: String
+    @State private var fundMetric: FundMetric
+
+    init(controller: MenuBarController, rule: AlertRule, isPresented: Binding<Bool>) {
+        self.controller = controller
+        self.rule = rule
+        self._isPresented = isPresented
+        _targetType = State(initialValue: rule.targetType)
+        _targetCode = State(initialValue: rule.targetCode)
+        _targetName = State(initialValue: rule.targetName)
+        _direction = State(initialValue: rule.direction)
+        _threshold = State(initialValue: String(format: "%.3f", rule.threshold))
+        _label = State(initialValue: rule.label)
+        _fundMetric = State(initialValue: rule.fundMetric ?? .nav)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("编辑预警规则")
+                .font(.headline)
+
+            // 标的类型
+            FormSection("标的类型") {
+                SegmentedTabs(
+                    items: [AlertTargetType.goldCNY, AlertTargetType.sector, AlertTargetType.fund],
+                    selection: $targetType,
+                    label: { t in
+                        switch t {
+                        case .goldCNY: return "金CNY"
+                        case .sector: return "板块"
+                        case .fund: return "基金"
+                        }
+                    },
+                    style: .compact
+                )
+                .disabled(true)  // 编辑时不允许改标的类型
+                .onChange(of: targetType) { newType in
+                    switch newType {
+                    case .goldCNY: targetName = "黄金(CNY/g)"; targetCode = ""
+                    case .sector:
+                        targetName = ""
+                        targetCode = controller.configStore.config.sectors.first?.code ?? ""
+                    case .fund:
+                        targetName = ""
+                        targetCode = controller.configStore.config.funds.first?.code ?? ""
+                    }
+                }
+            }
+
+            // 板块/基金选择
+            if targetType == .sector || targetType == .fund {
+                FormSection("选择标的") {
+                    if targetType == .sector {
+                        Picker("", selection: $targetCode) {
+                            ForEach(controller.configStore.config.sectors, id: \.code) { s in
+                                Text("\(s.name) (\(s.code))").tag(s.code)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .onChange(of: targetCode) { newCode in
+                            targetName = controller.configStore.config.sectors.first(where: { $0.code == newCode })?.name ?? ""
+                        }
+                    } else {
+                        Picker("", selection: $targetCode) {
+                            ForEach(controller.configStore.config.funds, id: \.code) { f in
+                                Text("\(f.name) (\(f.code))").tag(f.code)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .onChange(of: targetCode) { newCode in
+                            targetName = controller.configStore.config.funds.first(where: { $0.code == newCode })?.name ?? ""
+                        }
+                    }
+                }
+            }
+
+            // 基金预警基准（仅基金）
+            if targetType == .fund {
+                FormSection("预警基准") {
+                    SegmentedTabs(
+                        items: FundMetric.allCases,
+                        selection: $fundMetric,
+                        label: { $0.rawValue },
+                        style: .compact
+                    )
+                    .onChange(of: fundMetric) { _ in
+                        threshold = ""
+                    }
+                    HStack(spacing: 4) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                        Text("基金预警在净值更新后触发（每个交易日收盘后）")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+
+            // 方向 + 阈值
+            HStack(spacing: 12) {
+                FormSection("方向") {
+                    SegmentedTabs(
+                        items: [AlertDirection.above, AlertDirection.below],
+                        selection: $direction,
+                        label: { d in d == .above ? "≥ 涨到" : "≤ 跌到" },
+                        style: .compact
+                    )
+                    .frame(width: 120)
+                }
+                Spacer()
+                FormSection("阈值") {
+                    FormTextField(placeholder: thresholdPlaceholder, text: $threshold, width: 100)
+                }
+            }
+
+            // 动作提示
+            FormSection("提醒文案（动作提示）") {
+                FormTextField(placeholder: "第1档止盈 · 建议卖1/3", text: $label)
+            }
+
+            Spacer()
+
+            // 按钮
+            HStack {
+                Spacer()
+                Button("取消") { isPresented = false }
+                    .buttonStyle(.bordered)
+                Button("保存") {
+                    saveRule()
+                    isPresented = false
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(threshold.isEmpty || label.isEmpty)
+            }
+        }
+        .padding(16)
+        .frame(width: 360, height: 440)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var thresholdPlaceholder: String {
+        if targetType == .goldCNY { return "700.00" }
+        if targetType == .fund && fundMetric == .nav { return "1.50" }
+        return "-2.50"
+    }
+
+    private func saveRule() {
+        guard let thr = Double(threshold) else { return }
+        var updated = rule
+        updated.targetType = targetType
+        updated.targetCode = targetCode
+        updated.targetName = targetName.isEmpty ? defaultName() : targetName
+        updated.direction = direction
+        updated.threshold = thr
+        updated.label = label
+        updated.fundMetric = targetType == .fund ? fundMetric : nil
+        controller.alertConfig.update(updated)
+    }
+
+    private func defaultName() -> String {
+        switch targetType {
+        case .goldCNY: return "黄金(CNY/g)"
+        case .sector: return "板块"
+        case .fund: return "基金"
+        }
+    }
 }

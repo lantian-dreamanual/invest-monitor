@@ -23,6 +23,7 @@ struct WatchConfig: Codable {
         sectors: [
             SectorConfig(code: "BK0475", name: "半导体"),
             SectorConfig(code: "BK0547", name: "黄金概念"),
+            SectorConfig(code: "BK1128", name: "CPO概念"),
         ],
         funds: [
             FundConfig(code: "161725", name: "招商中证白酒指数C"),

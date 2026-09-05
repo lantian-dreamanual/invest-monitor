@@ -4,8 +4,9 @@ import SwiftUI
 // ============ 全局颜色系统 ============
 
 extension Color {
-    static let up = Color.red         // 涨
-    static let down = Color.green     // 跌
+    // Tailwind v4 色板，饱和度低于系统纯色，深色背景下更柔和
+    static let up = Color(red: 0xEF/255, green: 0x44/255, blue: 0x44/255)   // red-500 #EF4444
+    static let down = Color(red: 0x22/255, green: 0xC5/255, blue: 0x5E/255) // green-500 #22C55E
     static let flat = Color.secondary // 平
 
     /// 涨跌颜色：>0 红、<0 绿、==0 灰
@@ -435,5 +436,33 @@ enum Format {
         if v >= 1e8 { return String(format: "%.1f亿", v / 1e8) }
         if v >= 1e4 { return String(format: "%.0f万", v / 1e4) }
         return String(format: "%.0f", v)
+    }
+}
+
+// ============ 代码→名称反查服务 ============
+
+/// 通过板块/基金代码反查名称，用于设置页添加时自动填充
+enum LookupService {
+    /// 板块代码（BKxxxx）→ 板块名称
+    static func sectorName(code: String) async -> String? {
+        let url = URL(string: "https://push2delay.eastmoney.com/api/qt/ulist.np/get?fltt=2&secids=90.\(code)&fields=f12,f14")!
+        guard let json = try? await NetworkClient.getJSON(url: url),
+              let data = json["data"] as? [String: Any],
+              let diff = data["diff"] as? [[String: Any]],
+              let first = diff.first,
+              let name = first["f14"] as? String else { return nil }
+        return name
+    }
+
+    /// 基金代码 → 基金名称
+    static func fundName(code: String) async -> String? {
+        let url = URL(string: "https://fundmobapi.eastmoney.com/FundMNewApi/FundMNFInfo?pageIndex=1&pageSize=1&Fcodes=\(code)&deviceid=Wap&plat=Wap&product=EFund&version=6.2.8")!
+        let ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)"
+        let referer = "https://mpservice.eastmoney.com/"
+        guard let json = try? await NetworkClient.getJSON(url: url, ua: ua, referer: referer),
+              let datas = json["Datas"] as? [[String: Any]],
+              let first = datas.first,
+              let name = first["SHORTNAME"] as? String else { return nil }
+        return name
     }
 }

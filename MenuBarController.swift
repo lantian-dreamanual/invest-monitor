@@ -2,6 +2,14 @@ import AppKit
 import SwiftUI
 import Combine
 
+/// 可聚焦的 NSPanel：nonactivatingPanel 默认 canBecomeKey 为 false，
+/// 导致面板内 TextField 无法获得焦点（输入框点不动）。
+/// 覆写后点击输入框时面板可作为 key window 接收键盘输入，同时保持非激活特性。
+final class FocusablePanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+}
+
 /// 状态栏控制器：负责状态栏图标、定时刷新、面板弹出
 final class MenuBarController: NSObject, ObservableObject {
     @Published var gold: GoldQuote?
@@ -123,14 +131,14 @@ final class MenuBarController: NSObject, ObservableObject {
     private func setupPanel() {
         let contentView = MainPanelView(controller: self)
         let hosting = NSHostingView(rootView: contentView)
-        hosting.frame = NSRect(x: 0, y: 0, width: 380, height: 460)
+        hosting.frame = NSRect(x: 0, y: 0, width: 400, height: 500)
         // 圆角裁剪：面板本身透明，内容视图裁出圆角
         hosting.wantsLayer = true
-        hosting.layer?.cornerRadius = 12
+        hosting.layer?.cornerRadius = 14
         hosting.layer?.masksToBounds = true
 
-        panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 460),
+        panel = FocusablePanel(
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 500),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
