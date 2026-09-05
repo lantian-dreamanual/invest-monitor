@@ -250,13 +250,18 @@ final class MenuBarController: NSObject, ObservableObject {
 
     // MARK: - 定时器
 
-    /// 黄金交易时段：夜盘 21:00-02:30 + 日盘 09:00-15:00
+    /// 黄金交易时段：夜盘 21:00-02:30 + 日盘 09:00-15:00（周末休市）
     var goldMarketStatus: MarketStatus {
         let cal = Calendar.current
+        let weekday = cal.component(.weekday, from: Date())
+        // 周末休市
+        guard weekday != 1 && weekday != 7 else { return .closed }
         let now = cal.component(.hour, from: Date()) * 60 + cal.component(.minute, from: Date())
-        if now >= 21 * 60 || now <= 2 * 60 + 30 { return .trading }
-        if now >= 9 * 60 && now <= 15 * 60 { return .trading }
-        return .closed
+        let inSession = now >= 21 * 60 || now <= 2 * 60 + 30 || (now >= 9 * 60 && now <= 15 * 60)
+        if !inSession { return .closed }
+        // 交易时段但数据不是当前时段 → 延迟
+        if isGoldDataStale { return .delayed }
+        return .trading
     }
 
     /// A股交易时段：09:30-11:30 + 13:00-15:00
@@ -272,9 +277,19 @@ final class MenuBarController: NSObject, ObservableObject {
         return .closed
     }
 
-    /// 任一市场在交易时段则刷新；全部休市则停止
+    /// 黄金分时数据是否过期（最后一个数据点距今超过 2 分钟）
+    private var isGoldDataStale: Bool {
+        guard let lastPoint = goldTrendData?.points.last else { return true }
+        let dfmt = DateFormatter()
+        dfmt.dateFormat = "yyyy-MM-dd HH:mm"
+        dfmt.timeZone = TimeZone(identifier: "Asia/Shanghai")
+        guard let lastDate = dfmt.date(from: lastPoint.time) else { return true }
+        return Date().timeIntervalSince(lastDate) > 120
+    }
+
+    /// 任一市场在交易时段（含数据延迟）则刷新；全部休市则停止
     private var anyMarketOpen: Bool {
-        goldMarketStatus == .trading || stockMarketStatus == .trading
+        goldMarketStatus == .trading || goldMarketStatus == .delayed || stockMarketStatus == .trading
     }
 
     /// 后台常驻定时器：任一市场交易时段每 30 秒刷新，全部休市时自动暂停
@@ -301,7 +316,7 @@ final class MenuBarController: NSObject, ObservableObject {
             guard let self else { return }
             let gold = self.goldMarketStatus
             let stock = self.stockMarketStatus
-            let anyTrading = gold == .trading || stock == .trading
+            let anyTrading = gold == .trading || gold == .delayed || stock == .trading
             let anyBreak = gold == .break_ || stock == .break_
 
             if anyTrading {

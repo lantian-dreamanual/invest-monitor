@@ -41,6 +41,7 @@ extension Color {
 /// 交易状态
 enum MarketStatus: Equatable {
     case trading   // 交易中
+    case delayed   // 数据延迟（交易时段但数据未实时更新）
     case break_    // 午休
     case closed    // 已收盘
 }
@@ -52,20 +53,35 @@ struct MarketStatusBadge: View {
     private var text: String {
         switch status {
         case .trading: return "交易中"
+        case .delayed: return "数据延迟"
         case .break_: return "午休"
         case .closed: return "已收盘"
         }
     }
 
-    private var isTrading: Bool { status == .trading }
+    private var textColor: Color {
+        switch status {
+        case .trading: return .brandGold
+        case .delayed: return Color(red: 0.961, green: 0.620, blue: 0.043)  // #F59E0B
+        default: return .secondary.opacity(0.55)
+        }
+    }
+
+    private var bgColor: Color {
+        switch status {
+        case .trading: return Color.brandGold.opacity(0.15)
+        case .delayed: return Color(red: 0.961, green: 0.620, blue: 0.043).opacity(0.15)
+        default: return Color.panelBackground
+        }
+    }
 
     var body: some View {
         Text(text)
             .font(.system(size: 10, weight: .medium))
             .padding(.horizontal, 6)
             .padding(.vertical, 1)
-            .background(isTrading ? Color.brandGold.opacity(0.15) : Color.panelBackground)
-            .foregroundColor(isTrading ? .brandGold : .secondary.opacity(0.55))
+            .background(bgColor)
+            .foregroundColor(textColor)
             .cornerRadius(6)
     }
 }
