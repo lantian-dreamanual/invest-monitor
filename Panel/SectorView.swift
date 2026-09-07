@@ -57,7 +57,7 @@ struct SectorView: View {
                     )
                 }
             }
-            .padding(.top, 0)
+            .padding(.top, controller.configStore.config.sectors.count > 1 ? 0 : 14)
             .padding(.horizontal, 14)
             .padding(.bottom, 14)
         }
