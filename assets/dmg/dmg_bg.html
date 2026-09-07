@@ -33,16 +33,18 @@ body { width: 660px; height: 400px; overflow: hidden; }
 <body>
 <div class="bg">
   <div class="arrow-wrap">
-    <svg width="140" height="44" viewBox="0 0 140 44">
+    <svg width="320" height="80" viewBox="0 0 320 80">
       <defs>
         <linearGradient id="arrowGrad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stop-color="#E9B832" stop-opacity="0.15"/>
-          <stop offset="0.4" stop-color="#E9B832" stop-opacity="0.7"/>
+          <stop offset="0" stop-color="#E9B832" stop-opacity="0.3"/>
+          <stop offset="0.2" stop-color="#E9B832" stop-opacity="0.85"/>
           <stop offset="1" stop-color="#E9B832"/>
         </linearGradient>
       </defs>
-      <line x1="8" y1="22" x2="116" y2="22" stroke="url(#arrowGrad)" stroke-width="3.5" stroke-linecap="round"/>
-      <polyline points="100,8 128,22 100,36" fill="none" stroke="#E9B832" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- 粗直线 -->
+      <rect x="8" y="28" width="250" height="24" rx="12" fill="url(#arrowGrad)"/>
+      <!-- 实心三角箭头 -->
+      <path d="M 220 0 L 320 40 L 220 80 Z" fill="#E9B832"/>
     </svg>
   </div>
   <div class="hint">拖拽到 Applications 文件夹安装</div>
