@@ -156,6 +156,7 @@ struct MainPanelView: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 6)
+        .padding(.bottom, 10)
     }
 }
 
