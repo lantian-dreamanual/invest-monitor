@@ -447,11 +447,13 @@ final class MenuBarController: NSObject, ObservableObject {
             }
             // 批量拉取实时涨跌
             let changes = try await sectorService.fetchStockChanges(codes: holdings)
-            // 计算估算：仅当净值日期非今日时显示盘中估算（净值已更新到今日则估算无意义）
+            // 计算估算：仅当净值日期非今日 且 A股在交易时段时才显示盘中估算
+            // 非交易时段重仓股无实时行情，估算无意义；净值已更新到今日则估算也无意义
             let today = Self.todayString()
+            let inTrading = stockMarketStatus == .trading
             var updated = details
             for i in updated.indices {
-                guard updated[i].quote.navDate != today else { continue }
+                guard updated[i].quote.navDate != today, inTrading else { continue }
                 let pct = FundEstimator.estimateChangePct(holdings: updated[i].holdings, stockMap: changes)
                 updated[i].estChangePct = pct
                 if let pct {
