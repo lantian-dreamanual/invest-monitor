@@ -447,9 +447,11 @@ final class MenuBarController: NSObject, ObservableObject {
             }
             // 批量拉取实时涨跌
             let changes = try await sectorService.fetchStockChanges(codes: holdings)
-            // 计算估算
+            // 计算估算：仅当净值日期非今日时显示盘中估算（净值已更新到今日则估算无意义）
+            let today = Self.todayString()
             var updated = details
             for i in updated.indices {
+                guard updated[i].quote.navDate != today else { continue }
                 let pct = FundEstimator.estimateChangePct(holdings: updated[i].holdings, stockMap: changes)
                 updated[i].estChangePct = pct
                 if let pct {
@@ -551,4 +553,13 @@ final class MenuBarController: NSObject, ObservableObject {
     }
 
     private var isRefreshing = false
+
+    /// 今日日期字符串 YYYY-MM-DD（用于判断基金净值日期是否为今日）
+    static func todayString() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        return f.string(from: Date())
+    }
 }
