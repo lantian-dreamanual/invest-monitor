@@ -57,7 +57,9 @@ struct SectorView: View {
                     )
                 }
             }
-            .padding(14)
+            .padding(.top, 0)
+            .padding(.horizontal, 14)
+            .padding(.bottom, 14)
         }
         .frame(maxWidth: .infinity)
     }
