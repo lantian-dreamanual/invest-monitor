@@ -37,6 +37,7 @@ struct TrendChart: View {
             Text("暂无分时数据")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity)
                 .frame(height: 130)
         } else {
             VStack(spacing: 0) {

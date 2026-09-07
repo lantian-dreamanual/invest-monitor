@@ -282,6 +282,7 @@ struct MarketCard<Content: View>: View {
 
     var body: some View {
         content
+            .frame(maxWidth: .infinity)
             .padding(14)
             .background(Color.cardBackground)
             .cornerRadius(12)
