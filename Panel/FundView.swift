@@ -61,6 +61,7 @@ struct FundCard: View {
     let changes: [String: Double]
 
     @State private var isExpanded = false
+    @State private var isHeaderHovered = false
 
     init(fund: FundDetail, changes: [String: Double], defaultExpanded: Bool = false) {
         self.fund = fund
@@ -68,11 +69,13 @@ struct FundCard: View {
         self._isExpanded = State(initialValue: defaultExpanded)
     }
 
+    private var canExpand: Bool { !fund.holdings.isEmpty }
+
     var body: some View {
         VStack(spacing: 0) {
-            // ===== 净值信息区 =====
+            // ===== 净值信息区（整区可点击切换收起/展开） =====
             VStack(alignment: .leading, spacing: 6) {
-                // 标题行：名称 + 代码（左侧）  收起/展开按钮（右侧）
+                // 标题行：名称 + 代码（左侧）  展开指示箭头（右侧）
                 HStack(spacing: 8) {
                     Text(fund.quote.name)
                         .font(.system(size: 13, weight: .semibold))
@@ -81,13 +84,10 @@ struct FundCard: View {
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                     Spacer()
-                    if !fund.holdings.isEmpty {
-                        Button(action: { withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() } }) {
-                            AppIcon(name: isExpanded ? "chevron-down" : "chevron-right", size: 12)
-                                .foregroundColor(.secondary)
-                                .frame(width: 20, height: 20)
-                        }
-                        .buttonStyle(.plain)
+                    if canExpand {
+                        AppIcon(name: isExpanded ? "chevron-down" : "chevron-right", size: 12)
+                            .foregroundColor(.secondary)
+                            .frame(width: 20, height: 20)
                     }
                 }
 
@@ -103,8 +103,7 @@ struct FundCard: View {
                 }
                 .padding(.top, 2)
 
-                // 净值日期 + 盘中估算（同行走尾，仅显示估算净值，不显示估算涨跌）
-                // 说明：估算涨跌基于今日重仓股行情，与官方净值涨跌（前一净值日基准）不同日，并排易混淆故去掉
+                // 净值日期 + 盘中估算
                 HStack(spacing: 8) {
                     Text("净值日期 \(fund.quote.navDate)")
                         .font(.system(size: 10))
@@ -121,6 +120,25 @@ struct FundCard: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
+            .background(
+                canExpand
+                    ? Color.white.opacity(isHeaderHovered ? 0.06 : 0)
+                    : Color.clear
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard canExpand else { return }
+                withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
+            }
+            .onHover { hovering in
+                guard canExpand else { return }
+                isHeaderHovered = hovering
+                if hovering {
+                    NSCursor.pointingHand.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
 
             // ===== 重仓列表区（收起时隐藏） =====
             if isExpanded {

@@ -1,6 +1,6 @@
 {
-  "version": "1.0.4",
-  "notes": "优化：单只基金自动展开重仓；补充板块/基金页空状态提示",
+  "version": "1.0.5",
+  "notes": "优化：基金卡片头部整区可点击展开/收起，热区更大更易操作",
   "download_url": "https://dreamanual.com/works/downloads/Dreamanual 投资监控.dmg",
   "release_url": "https://github.com/lantian-dreamanual/invest-monitor/releases"
 }
