@@ -8,7 +8,22 @@ struct SectorView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
-                if let s = controller.sector {
+                if controller.configStore.config.sectors.isEmpty {
+                    // 未配置任何板块
+                    VStack(spacing: 8) {
+                        Spacer()
+                            .frame(height: 80)
+                        AppIcon(name: "sector", size: 22)
+                            .foregroundColor(.secondary)
+                        Text("暂未添加板块")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                        Text("在设置页「自选板块」中添加")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary.opacity(0.6))
+                    }
+                    .frame(maxWidth: .infinity)
+                } else if let s = controller.sector {
                     // 板块指数头部卡片
                     MarketCard {
                         PriceHeader(

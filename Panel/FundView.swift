@@ -9,24 +9,41 @@ struct FundView: View {
     var body: some View {
         VStack(spacing: 0) {
             if controller.funds.isEmpty {
-                VStack(spacing: 8) {
-                    Spacer()
-                    if let err = controller.fundErrorMessage {
-                        AppIcon(name: "wifi-error", size: 22)
+                // 区分「未配置基金」和「加载中/出错」
+                if controller.configStore.config.funds.isEmpty {
+                    VStack(spacing: 8) {
+                        Spacer()
+                        AppIcon(name: "fund", size: 22)
                             .foregroundColor(.secondary)
-                        Text(err)
-                            .font(.caption)
+                        Text("暂未添加基金")
+                            .font(.system(size: 13))
                             .foregroundColor(.secondary)
-                    } else {
-                        ProgressView("加载基金数据…")
+                        Text("在设置页「自选基金」中添加")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary.opacity(0.6))
+                        Spacer()
                     }
-                    Spacer()
+                } else {
+                    VStack(spacing: 8) {
+                        Spacer()
+                        if let err = controller.fundErrorMessage {
+                            AppIcon(name: "wifi-error", size: 22)
+                                .foregroundColor(.secondary)
+                            Text(err)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        } else {
+                            ProgressView("加载基金数据…")
+                        }
+                        Spacer()
+                    }
                 }
             } else {
                 ScrollView {
                     LazyVStack(spacing: 14) {
+                        let fundCount = controller.funds.count
                         ForEach(controller.funds, id: \.quote.code) { fund in
-                            FundCard(fund: fund, changes: controller.fundStockChanges)
+                            FundCard(fund: fund, changes: controller.fundStockChanges, defaultExpanded: fundCount == 1)
                         }
                     }
                     .padding(14)
@@ -44,6 +61,12 @@ struct FundCard: View {
     let changes: [String: Double]
 
     @State private var isExpanded = false
+
+    init(fund: FundDetail, changes: [String: Double], defaultExpanded: Bool = false) {
+        self.fund = fund
+        self.changes = changes
+        self._isExpanded = State(initialValue: defaultExpanded)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
