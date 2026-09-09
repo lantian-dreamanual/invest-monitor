@@ -1,6 +1,6 @@
 {
-  "version": "1.0.2",
-  "notes": "优化：基金卡片支持收起/展开重仓列表，减少多基金时滚动距离；基金代码移至名称右侧",
-  "download_url": "https://dreamanual.com/works/downloads/Dreamanual投资监控.dmg",
+  "version": "1.0.3",
+  "notes": "优化：基金卡片默认收起重仓列表；app 文件名中英文间加空格",
+  "download_url": "https://dreamanual.com/works/downloads/Dreamanual 投资监控.dmg",
   "release_url": "https://github.com/lantian-dreamanual/invest-monitor/releases"
 }

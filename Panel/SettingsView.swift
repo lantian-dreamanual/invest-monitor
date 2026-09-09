@@ -35,7 +35,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 5) {
                     sectionHeader(
                         title: "自选板块",
-                    trailing: IconButton(systemName: showAddSector ? "minus" : "plus") {
+                    trailing: IconButton(iconName: showAddSector ? "minus" : "plus") {
                         withAnimation(.easeInOut(duration: 0.15)) {
                             showAddSector.toggle()
                         }
@@ -95,7 +95,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 5) {
                     sectionHeader(
                         title: "自选基金",
-                    trailing: IconButton(systemName: showAddFund ? "minus" : "plus") {
+                    trailing: IconButton(iconName: showAddFund ? "minus" : "plus") {
                         withAnimation(.easeInOut(duration: 0.15)) {
                             showAddFund.toggle()
                         }
@@ -179,7 +179,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 5) {
                     sectionHeader(
                         title: "预警规则",
-                        trailing: IconButton(systemName: "plus") {
+                        trailing: IconButton(iconName: "plus") {
                             showAddAlert = true
                         }
                         .help("添加规则")
@@ -262,28 +262,48 @@ struct SettingsView: View {
                             }
                             .padding(.horizontal, 14)
                             .padding(.vertical, 9)
+
+                            Divider().opacity(0.4)
+
+                            // 赞赏
+                            Button {
+                                if let url = URL(string: "https://afdian.com/a/wuyifa001") {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    AppIcon(name: "coffee", size: 13)
+                                    Text("请我喝杯咖啡")
+                                        .font(.system(size: 13))
+                                    Spacer()
+                                }
+                                .foregroundColor(.brandGold)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
                         }
                     }
                 }
 
-                // ===== 赞赏 =====
-                HStack {
-                    Spacer()
-                    Button {
-                        if let url = URL(string: "https://afdian.com/a/wuyifa001") {
-                            NSWorkspace.shared.open(url)
+                // ===== 退出程序（独立卡片） =====
+                VStack(alignment: .leading, spacing: 5) {
+                    SettingsCard {
+                        Button {
+                            NSApplication.shared.terminate(nil)
+                        } label: {
+                            HStack(spacing: 6) {
+                                AppIcon(name: "power", size: 13)
+                                Text("退出投资监控")
+                                    .font(.system(size: 13))
+                                Spacer()
+                            }
+                            .foregroundColor(.red)
                         }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "cup.and.saucer.fill")
-                                .font(.system(size: 11))
-                            Text("请我喝杯咖啡")
-                                .font(.system(size: 12))
-                        }
-                        .foregroundColor(.secondary)
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
                     }
-                    .buttonStyle(.plain)
-                    Spacer()
                 }
 
                 if let m = message {
@@ -301,6 +321,7 @@ struct SettingsView: View {
     }
 
     /// 区块标题行：标题在左、操作按钮在右（对齐 macOS 系统设置标题在卡片外的风格）
+    /// 统一固定 28pt 高度，消除有按钮/无按钮时的间距差异
     private func sectionHeader<Trailing: View>(title: String, trailing: Trailing) -> some View {
         HStack {
             Text(title)
@@ -309,6 +330,7 @@ struct SettingsView: View {
             Spacer()
             trailing
         }
+        .frame(height: 28)
     }
 
     // MARK: - 更新检查状态文案
@@ -460,8 +482,7 @@ struct SettingsView: View {
         let trimmed = code.trimmingCharacters(in: .whitespaces)
         let needsSearch = !trimmed.isEmpty && trimmed.uppercased() != lastSearched.uppercased() && !isSearching
         Button(action: action) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 12))
+            AppIcon(name: "search", size: 12)
                 .foregroundColor(needsSearch ? Color(red: 0.13, green: 0.15, blue: 0.16) : Color.brandGold)
                 .frame(width: 30, height: 30)
                 .background(
@@ -490,8 +511,7 @@ struct SettingsView: View {
             }
         case .found(let name):
             HStack(spacing: 6) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 10))
+                AppIcon(name: "check-circle", size: 10)
                     .foregroundColor(.down)
                 Text(name)
                     .font(.system(size: 11))
@@ -513,8 +533,7 @@ struct SettingsView: View {
             }
         case .notFound:
             HStack(spacing: 4) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 10))
+                    AppIcon(name: "warning", size: 10)
                     .foregroundColor(.orange)
                 Text("未找到该\(label)，请检查代码")
                     .font(.system(size: 11))

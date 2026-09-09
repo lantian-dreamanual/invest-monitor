@@ -22,25 +22,32 @@ xcrun swiftc -O \
 echo "编译成功"
 
 echo "========== 2/4 组装 app =========="
-rm -rf "Dreamanual投资监控.app"
-mkdir -p "Dreamanual投资监控.app/Contents/MacOS"
-mkdir -p "Dreamanual投资监控.app/Contents/Resources"
-cp "投资监控" "Dreamanual投资监控.app/Contents/MacOS/投资监控"
-cp Info.plist "Dreamanual投资监控.app/Contents/Info.plist"
-cp "assets/dmg/AppIcon.icns" "Dreamanual投资监控.app/Contents/Resources/AppIcon.icns"
+rm -rf "Dreamanual 投资监控.app"
+mkdir -p "Dreamanual 投资监控.app/Contents/MacOS"
+mkdir -p "Dreamanual 投资监控.app/Contents/Resources/icons"
+cp "投资监控" "Dreamanual 投资监控.app/Contents/MacOS/投资监控"
+cp Info.plist "Dreamanual 投资监控.app/Contents/Info.plist"
+cp "assets/dmg/AppIcon.icns" "Dreamanual 投资监控.app/Contents/Resources/AppIcon.icns"
+# 图标 PNG：从 assets/icons/*.svg 转换（若 PNG 已存在直接复制）
+if ls assets/icons/*.png &>/dev/null; then
+  cp assets/icons/*.png "Dreamanual 投资监控.app/Contents/Resources/icons/"
+elif ls assets/icons/*.svg &>/dev/null; then
+  swift .temp/convert_icons.swift 2>/dev/null || true
+  cp assets/icons/*.png "Dreamanual 投资监控.app/Contents/Resources/icons/" 2>/dev/null || true
+fi
 echo "app 组装完成"
 
 echo "========== 3/4 签名 =========="
-codesign --force --deep --sign - "Dreamanual投资监控.app"
+codesign --force --deep --sign - "Dreamanual 投资监控.app"
 echo "签名完成"
 
 echo "========== 4/4 打包 DMG =========="
-rm -f "dist/Dreamanual投资监控.dmg"
-npx appdmg "assets/dmg/dmg_config.json" "dist/Dreamanual投资监控.dmg"
+rm -f "dist/Dreamanual 投资监控.dmg"
+npx appdmg "assets/dmg/dmg_config.json" "dist/Dreamanual 投资监控.dmg"
 echo "DMG 打包完成"
 
 echo "========== 完成 =========="
-ls -lh "dist/Dreamanual投资监控.dmg"
+ls -lh "dist/Dreamanual 投资监控.dmg"
 echo ""
 echo "可选: 启动新版"
-echo "  pkill -f '投资监控'; sleep 1; open 'Dreamanual投资监控.app'"
+echo "  pkill -f '投资监控'; sleep 1; open 'Dreamanual 投资监控.app'"

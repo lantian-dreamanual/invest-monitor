@@ -16,8 +16,7 @@ struct AlertRuleList: View {
             // 总开关行：全部规则一键启停，样式与单行开关一致
             if !controller.alertConfig.rules.isEmpty {
                 HStack(spacing: 6) {
-                    Image(systemName: "bell.fill")
-                        .font(.system(size: 12))
+                    AppIcon(name: "bell", size: 12)
                         .foregroundColor(.secondary)
                         .frame(width: 18)
                     Text("全部规则")
@@ -41,8 +40,7 @@ struct AlertRuleList: View {
 
             if controller.alertConfig.rules.isEmpty {
                 HStack(spacing: 6) {
-                    Image(systemName: "bell.slash")
-                        .font(.system(size: 12))
+                    AppIcon(name: "bell-off", size: 12)
                         .foregroundColor(.secondary)
                     Text("暂无预警规则，点击 + 添加")
                         .font(.system(size: 12))
@@ -118,8 +116,7 @@ struct AlertGroupView: View {
             // 组头
             Button(action: onToggleCollapse) {
                 HStack(spacing: 6) {
-                    Image(systemName: groupIcon)
-                        .font(.system(size: 10.5))
+                    AppIcon(name: appIconName, size: 10.5)
                         .foregroundColor(groupColor)
                         .frame(width: 18)
                     Text(group.name)
@@ -135,8 +132,7 @@ struct AlertGroupView: View {
                         .foregroundColor(hasTriggered ? .orange : .secondary)
                         .cornerRadius(6)
                     Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
+                    AppIcon(name: "chevron-right", size: 10)
                         .foregroundColor(.secondary)
                         .rotationEffect(.degrees(isCollapsed ? 0 : 90))
                 }
@@ -169,11 +165,11 @@ struct AlertGroupView: View {
         .opacity(allDisabled ? 0.65 : 1)
     }
 
-    private var groupIcon: String {
+    private var appIconName: String {
         switch group.targetType {
-        case .goldCNY: return "scalemass.fill"
-        case .sector: return "square.grid.2x2.fill"
-        case .fund: return "chart.pie.fill"
+        case .goldCNY: return "gold"
+        case .sector: return "sector"
+        case .fund: return "fund"
         }
     }
 
@@ -212,8 +208,7 @@ struct AlertRuleRow: View {
                 // 第二行：动作提示 / 触发状态
                 HStack(spacing: 4) {
                     if rule.triggered, let t = rule.triggeredAt {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 10))
+                        AppIcon(name: "check-circle", size: 10)
                             .foregroundColor(.orange)
                         Text("已触发 \(t, format: .dateTime.hour().minute())")
                             .font(.caption2)
@@ -368,11 +363,7 @@ struct AddAlertSheet: View {
                     }
                     // 提示：基金预警只通过官方净值触发
                     HStack(spacing: 4) {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
-                        Text("基金预警在净值更新后触发（每个交易日收盘后）")
-                            .font(.system(size: 10))
+                        AppIcon(name: "info", size: 10)
                             .foregroundColor(.secondary)
                     }
                 }
@@ -557,11 +548,7 @@ struct EditAlertSheet: View {
                         threshold = ""
                     }
                     HStack(spacing: 4) {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
-                        Text("基金预警在净值更新后触发（每个交易日收盘后）")
-                            .font(.system(size: 10))
+                        AppIcon(name: "info", size: 10)
                             .foregroundColor(.secondary)
                     }
                 }

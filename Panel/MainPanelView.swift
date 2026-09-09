@@ -34,8 +34,7 @@ struct MainPanelView: View {
                 if let err = controller.errorMessage {
                     Divider()
                     HStack(spacing: 4) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 9))
+                        AppIcon(name: "warning", size: 9)
                             .foregroundColor(.orange)
                         Text(err)
                             .font(.caption2)
@@ -71,7 +70,7 @@ struct MainPanelView: View {
                 .font(.system(size: 15, weight: .semibold))
             Spacer()
             if showSettings {
-                IconButton(systemName: "xmark") {
+                IconButton(iconName: "close") {
                     showSettings = false
                 }
                 .help("返回")
@@ -94,7 +93,7 @@ struct MainPanelView: View {
                         .foregroundColor(.secondary.opacity(0.55))
                         .monospacedDigit()
                 }
-                IconButton(systemName: "gearshape") {
+                IconButton(iconName: "gear") {
                     showSettings = true
                 }
                 .help("设置")
@@ -169,8 +168,7 @@ struct UpdateBanner: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "arrow.up.circle.fill")
-                .font(.system(size: 16))
+            AppIcon(name: "update", size: 16)
                 .foregroundColor(.brandGold)
 
             VStack(alignment: .leading, spacing: 1) {
@@ -200,8 +198,7 @@ struct UpdateBanner: View {
             Button {
                 onIgnore()
             } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9))
+                AppIcon(name: "close", size: 9)
                     .foregroundColor(.secondary)
             }
             .buttonStyle(.plain)

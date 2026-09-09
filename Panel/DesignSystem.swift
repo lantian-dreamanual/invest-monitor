@@ -139,20 +139,54 @@ struct SegmentedTabs<T: Hashable>: View {
     }
 }
 
+// ============ 设计系统：自定义图标 ============
+
+/// 统一加载 app bundle 内的 Lucide 图标（PNG template 模式）
+/// 用法：AppIcon("gear", size: 14).foregroundColor(.secondary)
+struct AppIcon: View {
+    let name: String
+    var size: CGFloat = 14
+
+    var body: some View {
+        if let nsImage = NSImage(named: "icon-\(name)") ?? loadFromBundle("icon-\(name)") {
+            Image(nsImage: nsImage)
+                .renderingMode(.template)
+                .resizable()
+                .interpolation(.high)
+                .frame(width: size, height: size)
+        } else {
+            // fallback：找不到资源时显示占位
+            Image(systemName: "questionmark")
+                .font(.system(size: size * 0.7))
+                .frame(width: size, height: size)
+        }
+    }
+
+    private func loadFromBundle(_ name: String) -> NSImage? {
+        let bundle = Bundle.main
+        if let path = bundle.path(forResource: name, ofType: "png", inDirectory: "icons") {
+            return NSImage(contentsOfFile: path)
+        }
+        if let path = bundle.path(forResource: name, ofType: "png") {
+            return NSImage(contentsOfFile: path)
+        }
+        return nil
+    }
+}
+
 // ============ 设计系统：图标按钮 ============
 
 /// 带悬浮反馈的图标按钮：解决 nonactivatingPanel 下 .borderless/.plain 无悬浮态问题
 /// 悬浮时背景变亮 + 图标颜色提亮，让用户感知可点击
 struct IconButton: View {
-    let systemName: String
+    let iconName: String
     let action: () -> Void
 
     @State private var isHovered = false
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 14))
+            AppIcon(name: iconName, size: 14)
                 .foregroundColor(isHovered ? .primary : .secondary)
                 .frame(width: 28, height: 28)
                 .background(

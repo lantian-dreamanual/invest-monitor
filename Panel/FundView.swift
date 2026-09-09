@@ -12,8 +12,7 @@ struct FundView: View {
                 VStack(spacing: 8) {
                     Spacer()
                     if let err = controller.fundErrorMessage {
-                        Image(systemName: "wifi.exclamationmark")
-                            .font(.system(size: 22))
+                        AppIcon(name: "wifi-error", size: 22)
                             .foregroundColor(.secondary)
                         Text(err)
                             .font(.caption)
@@ -44,7 +43,7 @@ struct FundCard: View {
     let fund: FundDetail
     let changes: [String: Double]
 
-    @State private var isExpanded = true
+    @State private var isExpanded = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -61,8 +60,7 @@ struct FundCard: View {
                     Spacer()
                     if !fund.holdings.isEmpty {
                         Button(action: { withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() } }) {
-                            Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                                .font(.system(size: 12, weight: .medium))
+                            AppIcon(name: isExpanded ? "chevron-down" : "chevron-right", size: 12)
                                 .foregroundColor(.secondary)
                                 .frame(width: 20, height: 20)
                         }

@@ -46,7 +46,7 @@ final class UpdateChecker: ObservableObject {
     private let githubAPIURL = URL(string: "https://api.github.com/repos/lantian-dreamanual/invest-monitor/releases/latest")!
 
     /// 固定的下载链接（version.json 和 GitHub Release 中 URL 永不变）
-    private let websiteDownloadURL = "https://dreamanual.com/works/downloads/Dreamanual投资监控.dmg"
+    private let websiteDownloadURL = "https://dreamanual.com/works/downloads/Dreamanual 投资监控.dmg"
     private let githubReleaseURL = "https://github.com/lantian-dreamanual/invest-monitor/releases"
 
     /// UserDefaults key

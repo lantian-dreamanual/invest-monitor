@@ -1,5 +1,5 @@
 {
-  "title": "Dreamanual投资监控",
+  "title": "Dreamanual 投资监控",
   "background": "dmg_background.png",
   "icon-size": 80,
   "format": "UDZO",
@@ -14,7 +14,7 @@
       "x": 180,
       "y": 170,
       "type": "file",
-      "path": "../../Dreamanual投资监控.app"
+      "path": "../../Dreamanual 投资监控.app"
     },
     {
       "x": 480,
