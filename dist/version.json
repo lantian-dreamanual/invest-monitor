@@ -1,6 +1,6 @@
 {
-  "version": "1.0.1",
-  "notes": "修复：黄金分时图周末/休市缺少日盘数据；分时线API限流导致面板加载失败；分时图增加最后更新时间提示",
+  "version": "1.0.2",
+  "notes": "优化：基金卡片支持收起/展开重仓列表，减少多基金时滚动距离；基金代码移至名称右侧",
   "download_url": "https://dreamanual.com/works/downloads/Dreamanual投资监控.dmg",
   "release_url": "https://github.com/lantian-dreamanual/invest-monitor/releases"
 }

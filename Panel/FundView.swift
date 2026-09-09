@@ -39,23 +39,35 @@ struct FundView: View {
 }
 
 /// 单只基金卡片：一张卡片内完成净值 + 盘中估算 + 重仓列表
+/// 重仓列表支持收起/展开，减少多基金时的滚动距离
 struct FundCard: View {
     let fund: FundDetail
     let changes: [String: Double]
+
+    @State private var isExpanded = true
 
     var body: some View {
         VStack(spacing: 0) {
             // ===== 净值信息区 =====
             VStack(alignment: .leading, spacing: 6) {
-                // 标题行：名称 + 代码
+                // 标题行：名称 + 代码（左侧）  收起/展开按钮（右侧）
                 HStack(spacing: 8) {
                     Text(fund.quote.name)
                         .font(.system(size: 13, weight: .semibold))
                         .lineLimit(1)
-                    Spacer()
                     Text(fund.quote.code)
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
+                    Spacer()
+                    if !fund.holdings.isEmpty {
+                        Button(action: { withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() } }) {
+                            Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                                .frame(width: 20, height: 20)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
 
                 // 净值大数 + 涨跌
@@ -89,22 +101,24 @@ struct FundCard: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
 
-            // ===== 重仓列表区 =====
-            Divider().opacity(0.5)
-            if fund.holdings.isEmpty {
-                Text("暂无重仓数据")
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-            } else {
-                holdingHeader
+            // ===== 重仓列表区（收起时隐藏） =====
+            if isExpanded {
                 Divider().opacity(0.5)
-                let rows = Array(fund.holdings.prefix(5))
-                ForEach(Array(rows.enumerated()), id: \.element.code) { idx, h in
-                    holdingRow(idx: idx, holding: h)
-                    if idx < rows.count - 1 {
-                        Divider().opacity(0.5)
+                if fund.holdings.isEmpty {
+                    Text("暂无重仓数据")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                } else {
+                    holdingHeader
+                    Divider().opacity(0.5)
+                    let rows = Array(fund.holdings.prefix(5))
+                    ForEach(Array(rows.enumerated()), id: \.element.code) { idx, h in
+                        holdingRow(idx: idx, holding: h)
+                        if idx < rows.count - 1 {
+                            Divider().opacity(0.5)
+                        }
                     }
                 }
             }
