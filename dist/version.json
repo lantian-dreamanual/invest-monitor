@@ -1,6 +1,6 @@
 {
-  "version": "1.0.5",
-  "notes": "优化：基金卡片头部整区可点击展开/收起，热区更大更易操作",
+  "version": "1.0.6",
+  "notes": "优化：基金盘中估算显示到当日净值发布前，收盘后自动切换为「今日估算」",
   "download_url": "https://dreamanual.com/works/downloads/Dreamanual 投资监控.dmg",
   "release_url": "https://github.com/lantian-dreamanual/invest-monitor/releases"
 }

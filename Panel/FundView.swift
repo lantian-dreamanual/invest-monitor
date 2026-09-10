@@ -43,7 +43,7 @@ struct FundView: View {
                     LazyVStack(spacing: 14) {
                         let fundCount = controller.funds.count
                         ForEach(controller.funds, id: \.quote.code) { fund in
-                            FundCard(fund: fund, changes: controller.fundStockChanges, defaultExpanded: fundCount == 1)
+                            FundCard(fund: fund, changes: controller.fundStockChanges, marketStatus: controller.stockMarketStatus, defaultExpanded: fundCount == 1)
                         }
                     }
                     .padding(14)
@@ -59,13 +59,15 @@ struct FundView: View {
 struct FundCard: View {
     let fund: FundDetail
     let changes: [String: Double]
+    let marketStatus: MarketStatus
 
     @State private var isExpanded = false
     @State private var isHeaderHovered = false
 
-    init(fund: FundDetail, changes: [String: Double], defaultExpanded: Bool = false) {
+    init(fund: FundDetail, changes: [String: Double], marketStatus: MarketStatus, defaultExpanded: Bool = false) {
         self.fund = fund
         self.changes = changes
+        self.marketStatus = marketStatus
         self._isExpanded = State(initialValue: defaultExpanded)
     }
 
@@ -110,7 +112,7 @@ struct FundCard: View {
                         .foregroundColor(.secondary.opacity(0.55))
                     Spacer()
                     if let estNav = fund.estNav {
-                        Text("盘中估算")
+                        Text(marketStatus == .trading ? "盘中估算" : "今日估算")
                             .font(.system(size: 10))
                             .foregroundColor(.secondary.opacity(0.55))
                         Text(Format.price(estNav))

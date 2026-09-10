@@ -447,13 +447,19 @@ final class MenuBarController: NSObject, ObservableObject {
             }
             // 批量拉取实时涨跌
             let changes = try await sectorService.fetchStockChanges(codes: holdings)
-            // 计算估算：仅当净值日期非今日 且 A股在交易时段时才显示盘中估算
-            // 非交易时段重仓股无实时行情，估算无意义；净值已更新到今日则估算也无意义
+            // 计算估算：交易日（非周末）且净值未更新到今日时计算估算，
+            // 时段限制在当日 9:30 之后——开盘前重仓股无当日行情，估算无意义
+            // 收盘后到净值发布前保留当日估算快照作为参考
+            // 净值已更新到今日则估算无意义，不再计算
             let today = Self.todayString()
-            let inTrading = stockMarketStatus == .trading
+            let cal = Calendar.current
+            let weekday = cal.component(.weekday, from: Date())
+            let isTradingDay = weekday != 1 && weekday != 7 // 周一~周五（节假日未做映射）
+            let nowMinute = cal.component(.hour, from: Date()) * 60 + cal.component(.minute, from: Date())
+            let afterOpen = nowMinute >= 9 * 60 + 30 // 已过 9:30
             var updated = details
             for i in updated.indices {
-                guard updated[i].quote.navDate != today, inTrading else { continue }
+                guard isTradingDay, afterOpen, updated[i].quote.navDate != today else { continue }
                 let pct = FundEstimator.estimateChangePct(holdings: updated[i].holdings, stockMap: changes)
                 updated[i].estChangePct = pct
                 if let pct {
