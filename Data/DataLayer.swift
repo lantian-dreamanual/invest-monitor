@@ -476,6 +476,8 @@ actor FundService {
 // ============ 格式化 ============
 enum Format {
     static func price(_ v: Double) -> String { String(format: "%.2f", v) }
+    /// 基金净值专用：4 位小数（基金净值通常较小，需更多精度）
+    static func navPrice(_ v: Double) -> String { String(format: "%.4f", v) }
     static func pct(_ v: Double) -> String { String(format: "%+.2f%%", v) }
 
     /// 成交额（元）→ 亿/万 缩写

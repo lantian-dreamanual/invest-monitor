@@ -95,7 +95,7 @@ struct FundCard: View {
 
                 // 净值大数 + 涨跌
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(Format.price(fund.quote.nav))
+                    Text(Format.navPrice(fund.quote.nav))
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundColor(Color.trend(fund.quote.navChangePct))
                     Text(Format.pct(fund.quote.navChangePct))
@@ -115,7 +115,7 @@ struct FundCard: View {
                         Text(marketStatus == .trading ? "盘中估算" : "今日估算")
                             .font(.system(size: 10))
                             .foregroundColor(.secondary.opacity(0.55))
-                        Text(Format.price(estNav))
+                        Text(Format.navPrice(estNav))
                             .font(.system(size: 12, weight: .medium))
                     }
                 }
